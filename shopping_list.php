@@ -86,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_email'])) {
                     
                     
                     // Recipients
-                    $mail->setFrom('Recipients_email@gmail.com', 'Supply Dashboard');
+                    $mail->setFrom($_ENV['SMTP_EMAIL'], 'Supply Dashboard');
                     foreach ($email_list as $email) {
                         $mail->addAddress($email);
                     }
