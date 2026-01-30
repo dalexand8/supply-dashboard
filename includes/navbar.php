@@ -32,9 +32,6 @@
                     <li class="nav-item">
                         <a class="nav-link" href="login_activity.php">Login Activity Log</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="register.php">Register User</a>
-                    </li>
                 <?php endif; ?>
             </ul>
             <ul class="navbar-nav ms-auto">
