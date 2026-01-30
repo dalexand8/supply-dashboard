@@ -48,13 +48,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['new_item_name'])) {
     }
 }
 try {
-    $stmt = $pdo->prepare("SELECT s.id, s.name, s.category_id, c.name as category_name, u.username 
-                           FROM suggestions s 
-                           JOIN users u ON s.user_id = u.id 
-                           LEFT JOIN categories c ON s.category_id = c.id 
-                           WHERE s.approved = 0");
-    $stmt->execute();
-    $suggestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt = $pdo->prepare("
+    SELECT 
+        s.id, 
+        s.name, 
+        s.variant_name, 
+        s.category_id, 
+        s.parent_item_id,
+        c.name as category_name, 
+        u.username 
+    FROM suggestions s 
+    JOIN users u ON s.user_id = u.id 
+    LEFT JOIN categories c ON s.category_id = c.id 
+    WHERE s.approved = 0
+");
+$stmt->execute();
+$suggestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     $stmt = $pdo->query("SELECT * FROM categories ORDER BY name");
     $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -81,14 +90,30 @@ $category_options = getOptions($pdo, 'categories');
             <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
         
-       <h3>Pending Item Suggestions</h3>
+     <h3>Pending Item Suggestions</h3>
 <ul class="list-group mb-5">
     <?php foreach ($suggestions as $sug): ?>
+        <?php
+        // Fetch parent item name if it's a variant suggestion
+        $parent_name = '';
+        if ($sug['parent_item_id']) {
+            $pstmt = $pdo->prepare("SELECT name FROM items WHERE id = ?");
+            $pstmt->execute([$sug['parent_item_id']]);
+            $parent_name = $pstmt->fetchColumn();
+        }
+        ?>
         <li class="list-group-item d-flex justify-content-between align-items-center">
             <div>
-                <?php echo htmlspecialchars($sug['name']); ?>
-                <?php if ($sug['category_name']): ?>
-                    (Category: <?php echo htmlspecialchars($sug['category_name']); ?>)
+                <?php if ($sug['parent_item_id']): ?>
+                    <strong>Variant Suggestion for "<?php echo htmlspecialchars($parent_name ?: 'Unknown Item'); ?>"</strong>: <?php echo htmlspecialchars($sug['variant_name']); ?>
+                <?php else: ?>
+                    <strong>New Item Suggestion</strong>: <?php echo htmlspecialchars($sug['name']); ?>
+                    <?php if ($sug['variant_name']): ?>
+                        (Initial Variant: <?php echo htmlspecialchars($sug['variant_name']); ?>)
+                    <?php endif; ?>
+                    <?php if ($sug['category_name']): ?>
+                        (Category: <?php echo htmlspecialchars($sug['category_name']); ?>)
+                    <?php endif; ?>
                 <?php endif; ?>
                 <small class="text-muted"> - Suggested by <?php echo htmlspecialchars($sug['username']); ?></small>
             </div>
