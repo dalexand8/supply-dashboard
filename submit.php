@@ -1,5 +1,5 @@
 <?php
-// submit.php - Fixed Select2 loading and form submit
+// submit.php - With predefined variants dropdown
 session_start();
 include 'db.php';
 if (!isset($_SESSION['user_id'])) {
@@ -12,6 +12,7 @@ $success = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $location = $_POST['location'] ?? '';
     $item = $_POST['item'] ?? '';
+    $variant_id = !empty($_POST['variant_id']) ? (int)$_POST['variant_id'] : null;
     $quantity = (int)($_POST['quantity'] ?? 1);
     $other = isset($_POST['other']) ? substr($_POST['other'], 0, 25) : '';
    
@@ -26,8 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $suggested = 0;
         }
        
-        $stmt = $pdo->prepare("INSERT INTO requests (location, item_name, suggested, user_id, quantity, status) VALUES (?, ?, ?, ?, ?, 'Pending')");
-        $stmt->execute([$location, $item_name, $suggested, $_SESSION['user_id'], $quantity]);
+        $stmt = $pdo->prepare("INSERT INTO requests (location, item_name, variant_id, suggested, user_id, quantity, status) VALUES (?, ?, ?, ?, ?, ?, 'Pending')");
+        $stmt->execute([$location, $item_name, $variant_id, $suggested, $_SESSION['user_id'], $quantity]);
        
         $success = 'Request submitted successfully';
         header('Location: dashboard.php');
@@ -38,10 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <?php include 'includes/header.php'; ?>
-
-<!-- Select2 CSS (safe here after header) -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-
 <?php include 'includes/navbar.php'; ?>
 
 <div class="container mt-5">
@@ -66,6 +64,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <select class="form-select js-example-basic-single" id="item" name="item" required>
             </select>
         </div>
+        <div class="mb-3" id="variant_container" style="display:none;">
+            <label for="variant_id" class="form-label">Variant</label>
+            <select class="form-select" id="variant_id" name="variant_id">
+                <!-- Filled by JS -->
+            </select>
+            <small class="text-muted">No variants available for this item.</small>
+        </div>
         <div class="mb-3" id="other_field" style="display:none;">
             <label for="other" class="form-label">Other Item (max 25 chars)</label>
             <input type="text" class="form-control" id="other" name="other" maxlength="25">
@@ -79,7 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <a href="dashboard.php" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
 
-<?php include 'includes/footer.php'; ?>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
     $(document).ready(function() {
         $('#item').select2({
@@ -90,14 +96,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 dataType: 'json',
                 delay: 250,
                 data: function (params) {
-                    return {
-                        q: params.term
-                    };
+                    return { q: params.term };
                 },
                 processResults: function (data) {
-                    return {
-                        results: data
-                    };
+                    return { results: data };
                 },
                 cache: true
             },
@@ -105,13 +107,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
         $('#item').append(new Option('Other', 'other', false, false));
         $('#item').val(null).trigger('change');
+        
         $('#item').on('change', function() {
-            if ($(this).val() === 'other') {
+            var item = $(this).val();
+            var $variantContainer = $('#variant_container');
+            var $variantSelect = $('#variant_id');
+            
+            $variantContainer.hide();
+            $variantSelect.empty().prop('disabled', true); // Start disabled
+            $('#other_field').hide();
+            
+            if (item === 'other') {
                 $('#other_field').show();
-            } else {
-                $('#other_field').hide();
+            } else if (item) {
+                $.get('api_variants.php', { item: item }, function(variants) {
+                    $variantSelect.empty();
+                    if (variants.length > 0) {
+                        $variantSelect.append('<option value="">-- Select Variant --</option>');
+                        variants.forEach(function(v) {
+                            $variantSelect.append('<option value="' + v.id + '">' + v.name + '</option>');
+                        });
+                        $variantSelect.prop('disabled', false); // Enable when variants exist
+                        $variantContainer.find('small').hide();
+                    } else {
+                        $variantSelect.append('<option value="" selected>N/A</option>');
+                        $variantSelect.prop('disabled', true); // Grey out N/A
+                        $variantContainer.find('small').show();
+                    }
+                    $variantContainer.show();
+                }, 'json').fail(function() {
+                    $variantSelect.empty().append('<option value="">Error loading variants</option>').prop('disabled', true);
+                    $variantContainer.show();
+                });
             }
         });
     });
 </script>
 
+<?php include 'includes/footer.php'; ?>

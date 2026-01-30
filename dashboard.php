@@ -57,21 +57,30 @@ try {
                 <ul class="list-group list-group-flush">
                     <?php foreach ($requests_by_location[$loc] ?? [] as $req): ?>
                         <li class="list-group-item">
-                            <?php echo htmlspecialchars($req['item_name']); ?> (Qty: <?php echo $req['quantity']; ?>) by <?php echo htmlspecialchars($req['username']); ?>
-                            <?php if ($req['created_at']): ?>
-                                - Submitted: <?php echo date('n/j/Y', strtotime($req['created_at'])); ?>
-                            <?php endif; ?>
-                            - Status: <span class="badge bg-<?php echo getStatusClass($req['status']); ?>"><?php echo $req['status']; ?></span>
-                            <?php if ($_SESSION['is_admin'] || ($_SESSION['user_id'] == $req['user_id'] && $req['status'] == 'Pending')): ?>
-                                <a href="edit.php?id=<?php echo $req['id']; ?>" class="btn btn-sm btn-warning float-end me-2">Edit</a>
-                            <?php endif; ?>
-                            <?php if ($_SESSION['user_id'] == $req['user_id'] && $req['status'] == 'Pending'): ?>
-                                <a href="delete_my_request.php?id=<?php echo $req['id']; ?>" class="btn btn-sm btn-danger float-end me-2" onclick="return confirm('Are you sure?');">Delete</a>
-                            <?php endif; ?>
-                            <?php if ($_SESSION['is_admin']): ?>
-                                <a href="delete_request.php?id=<?php echo $req['id']; ?>" class="btn btn-sm btn-danger float-end" onclick="return confirm('Are you sure?');">Admin Delete</a>
-                            <?php endif; ?>
-                        </li>
+    <?php echo htmlspecialchars($req['item_name']); ?>
+    <?php if (!empty($req['variant_id'])): ?>
+        <?php 
+        $vstmt = $pdo->prepare("SELECT name FROM item_variants WHERE id = ?");
+        $vstmt->execute([$req['variant_id']]);
+        $variant = $vstmt->fetchColumn();
+        if ($variant) echo ' (' . htmlspecialchars($variant) . ')';
+        ?>
+    <?php endif; ?>
+    (Qty: <?php echo $req['quantity']; ?>) by <?php echo htmlspecialchars($req['username']); ?>
+    <?php if ($req['created_at']): ?>
+        - Submitted: <?php echo date('n/j/Y', strtotime($req['created_at'])); ?>
+    <?php endif; ?>
+    - Status: <span class="badge bg-<?php echo getStatusClass($req['status']); ?>"><?php echo $req['status']; ?></span>
+    <?php if ($_SESSION['is_admin'] || ($_SESSION['user_id'] == $req['user_id'] && $req['status'] == 'Pending')): ?>
+        <a href="edit.php?id=<?php echo $req['id']; ?>" class="btn btn-sm btn-warning float-end me-2">Edit</a>
+    <?php endif; ?>
+    <?php if ($_SESSION['user_id'] == $req['user_id'] && $req['status'] == 'Pending'): ?>
+        <a href="delete_my_request.php?id=<?php echo $req['id']; ?>" class="btn btn-sm btn-danger float-end me-2" onclick="return confirm('Are you sure?');">Delete</a>
+    <?php endif; ?>
+    <?php if ($_SESSION['is_admin']): ?>
+        <a href="delete_request.php?id=<?php echo $req['id']; ?>" class="btn btn-sm btn-danger float-end" onclick="return confirm('Are you sure?');">Admin Delete</a>
+    <?php endif; ?>
+</li>
                     <?php endforeach; ?>
                     <?php if (empty($requests_by_location[$loc])): ?>
                         <li class="list-group-item">No requests yet</li>
