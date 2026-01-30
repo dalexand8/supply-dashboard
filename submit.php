@@ -1,5 +1,5 @@
 <?php
-// submit.php - Fixed Select2 loading
+// submit.php - Fixed Select2 loading and form submit
 session_start();
 include 'db.php';
 if (!isset($_SESSION['user_id'])) {
@@ -10,12 +10,36 @@ $locations = ['Turlock office', 'Modesto office', 'Merced office', 'Atwater Offi
 $error = '';
 $success = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // ... your existing POST handling code (unchanged) ...
+    $location = $_POST['location'] ?? '';
+    $item = $_POST['item'] ?? '';
+    $quantity = (int)($_POST['quantity'] ?? 1);
+    $other = isset($_POST['other']) ? substr($_POST['other'], 0, 25) : '';
+   
+    try {
+        if ($item === 'other' && $other) {
+            $item_name = $other;
+            $suggested = 1;
+            $stmt = $pdo->prepare("INSERT INTO suggestions (name, category_id, user_id) VALUES (?, NULL, ?)");
+            $stmt->execute([$item_name, $_SESSION['user_id']]);
+        } else {
+            $item_name = $item;
+            $suggested = 0;
+        }
+       
+        $stmt = $pdo->prepare("INSERT INTO requests (location, item_name, suggested, user_id, quantity, status) VALUES (?, ?, ?, ?, ?, 'Pending')");
+        $stmt->execute([$location, $item_name, $suggested, $_SESSION['user_id'], $quantity]);
+       
+        $success = 'Request submitted successfully';
+        header('Location: dashboard.php');
+        exit;
+    } catch (PDOException $e) {
+        $error = 'Error submitting request: ' . $e->getMessage();
+    }
 }
 ?>
 <?php include 'includes/header.php'; ?>
 
-<!-- Page-specific CSS for Select2 (add to header if you want shared) -->
+<!-- Select2 CSS (safe here after header) -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
 <?php include 'includes/navbar.php'; ?>
@@ -55,9 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <a href="dashboard.php" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
 
-<!-- Page-specific JS (jQuery, Select2, initialization) -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<?php include 'includes/footer.php'; ?>
 <script>
     $(document).ready(function() {
         $('#item').select2({
@@ -93,4 +115,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     });
 </script>
 
-<?php include 'includes/footer.php'; ?>
