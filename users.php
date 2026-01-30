@@ -72,21 +72,8 @@ try {
     $users = [];
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Manage Users - Supply Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        html, body { height: 100%; }
-        body { display: flex; flex-direction: column; }
-        .content { flex: 1 0 auto; }
-        footer { flex-shrink: 0; }
-    </style>
-</head>
-<body>
- <?php include 'includes/navbar.php'; ?>
+<?php include 'includes/header.php'; ?>
+<?php include 'includes/navbar.php'; ?>
     <div class="container mt-5 content">
         <h2>Manage Users</h2>
         <?php if ($success): ?>
@@ -152,9 +139,4 @@ try {
         </table>
         <a href="admin.php" class="btn btn-secondary">Back to Admin Panel</a>
     </div>
-    <footer class="bg-primary text-white text-center py-3">
-        <p>&copy; 2024 Supply Dashboard. All rights reserved.</p>
-    </footer>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+   <?php include 'includes/footer.php'; ?>

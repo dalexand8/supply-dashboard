@@ -1,6 +1,6 @@
 <?php
-// includes/navbar.php - Shared navbar with admin conditional links
-// Assume this is included after session_start() and login check on protected pages
+// includes/navbar.php - Shared navbar with conditional admin links
+// Must be included after session_start() and login check
 ?>
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container-fluid">

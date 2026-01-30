@@ -32,23 +32,9 @@ try {
     $error = 'Database error: ' . $e->getMessage();
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Dashboard - Supply Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        html, body { height: 100%; }
-        body { display: flex; flex-direction: column; }
-        .content { flex: 1 0 auto; }
-        footer { flex-shrink: 0; }
-        .office-card { transition: transform 0.2s; }
-        .office-card:hover { transform: translateY(-3px); }
-    </style>
-</head>
-<body>
-   <?php include 'includes/navbar.php'; ?>
+<?php include 'includes/header.php'; ?>
+<?php include 'includes/navbar.php'; ?>
+
     <div class="container mt-5 content">
         <?php if (isset($_SESSION['error'])): ?>
             <div class="alert alert-danger"><?php echo htmlspecialchars($_SESSION['error']); ?></div>
@@ -94,12 +80,9 @@ try {
             </div>
         <?php endforeach; ?>
     </div>
-    <footer class="bg-primary text-white text-center py-3">
-        <p>&copy; 2024 Supply Dashboard. All rights reserved.</p>
-    </footer>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+   
+<?php include 'includes/footer.php'; ?>
+
 <?php
 function getStatusClass($status) {
     switch ($status) {
