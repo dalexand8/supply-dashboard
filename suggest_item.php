@@ -1,7 +1,19 @@
 <?php
-// suggest_item.php - Variant suggestions in browse table
+// suggest_item.php - Fixed with error checking for notifications
 session_start();
 include 'db.php';
+
+// Include notify.php at top with error check
+if (file_exists('includes/notify.php')) {
+    include 'includes/notify.php';
+} else {
+    error_log('includes/notify.php not found - notifications disabled');
+    function notify_admins($subject, $body_html) {
+        // Fallback dummy function if missing
+        error_log("Notification attempted but notify.php missing: $subject");
+    }
+}
+
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
@@ -22,9 +34,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($check->fetch()) {
                     $error = 'This item already exists.';
                 } else {
-                    $insert = $pdo->prepare("INSERT INTO suggestions (parent_item_id, variant_name, user_id, name) VALUES (?, ?, ?, NULL)");
-                    $insert->execute([$parent_item_id, $variant_name, $_SESSION['user_id']]);
+                    $insert = $pdo->prepare("INSERT INTO suggestions (name, variant_name, category_id, user_id) VALUES (?, ?, ?, ?)");
+                    $insert->execute([$name, $variant_name ?: null, $category_id, $_SESSION['user_id']]);
                     $success = 'New item suggestion submitted!';
+                    
+                    // Safe notification with error check
+                    if (function_exists('notify_admins')) {
+                        try {
+                            $subject = 'New Item Suggestion';
+                            $body = "<p>User <strong>" . htmlspecialchars($_SESSION['username']) . "</strong> suggested a new item:</p>";
+                            $body .= "<p><strong>" . htmlspecialchars($name) . "</strong>";
+                            if ($variant_name) $body .= " (Initial Variant: " . htmlspecialchars($variant_name) . ")";
+                            if ($category_id) {
+                                $cat_stmt = $pdo->prepare("SELECT name FROM categories WHERE id = ?");
+                                $cat_stmt->execute([$category_id]);
+                                $cat_name = $cat_stmt->fetchColumn();
+                                if ($cat_name) $body .= " (Category: " . htmlspecialchars($cat_name) . ")";
+                            }
+                            $body .= "</p>";
+                            notify_admins($subject, $body);
+                        } catch (Exception $e) {
+                            error_log("Notification failed: " . $e->getMessage());
+                        }
+                    }
                 }
             } catch (PDOException $e) {
                 $error = 'Error: ' . $e->getMessage();
@@ -45,6 +77,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $insert = $pdo->prepare("INSERT INTO suggestions (parent_item_id, variant_name, user_id) VALUES (?, ?, ?)");
                     $insert->execute([$parent_item_id, $variant_name, $_SESSION['user_id']]);
                     $success = 'Variant suggestion submitted!';
+                    
+                    // Safe notification with error check
+                    if (function_exists('notify_admins')) {
+                        try {
+                            $pstmt = $pdo->prepare("SELECT name FROM items WHERE id = ?");
+                            $pstmt->execute([$parent_item_id]);
+                            $parent_name = $pstmt->fetchColumn();
+                            $subject = 'New Variant Suggestion';
+                            $body = "<p>User <strong>" . htmlspecialchars($_SESSION['username']) . "</strong> suggested a variant:</p>";
+                            $body .= "<p><strong>" . htmlspecialchars($variant_name) . "</strong> for item <strong>" . htmlspecialchars($parent_name ?: 'ID ' . $parent_item_id) . "</strong></p>";
+                            notify_admins($subject, $body);
+                        } catch (Exception $e) {
+                            error_log("Notification failed: " . $e->getMessage());
+                        }
+                    }
                 }
             } catch (PDOException $e) {
                 $error = 'Error: ' . $e->getMessage();
@@ -55,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Item browser
+// Item browser (unchanged from your version)
 $per_page = 50;
 $current_page = max(1, (int)($_GET['page'] ?? 1));
 $offset = ($current_page - 1) * $per_page;
@@ -167,7 +214,6 @@ try {
                 <tbody>
                     <?php foreach ($items as $item): ?>
                         <?php
-                        // Fetch current variants
                         $vstmt = $pdo->prepare("SELECT name FROM item_variants WHERE item_id = ? ORDER BY name");
                         $vstmt->execute([$item['id']]);
                         $variants = $vstmt->fetchAll(PDO::FETCH_COLUMN);

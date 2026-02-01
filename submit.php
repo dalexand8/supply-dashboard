@@ -1,7 +1,8 @@
 <?php
-// submit.php - With predefined variants dropdown
+// submit.php - Fixed notifications (only on success)
 session_start();
 include 'db.php';
+include 'includes/notify.php'; // Include at top so function always defined
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
@@ -30,7 +31,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("INSERT INTO requests (location, item_name, variant_id, suggested, user_id, quantity, status) VALUES (?, ?, ?, ?, ?, ?, 'Pending')");
         $stmt->execute([$location, $item_name, $variant_id, $suggested, $_SESSION['user_id'], $quantity]);
        
-        $success = 'Request submitted successfully';
+        $success = 'Request submitted successfully!';
+        
+        // Notification on success only
+        $subject = 'New Supply Request';
+        $body = "<p>User <strong>" . htmlspecialchars($_SESSION['username']) . "</strong> submitted a request:</p>";
+        $body .= "<p><strong>" . htmlspecialchars($item_name) . "</strong>";
+        if ($variant_id) {
+            $vstmt = $pdo->prepare("SELECT name FROM item_variants WHERE id = ?");
+            $vstmt->execute([$variant_id]);
+            $variant = $vstmt->fetchColumn();
+            if ($variant) $body .= " (" . htmlspecialchars($variant) . ")";
+        }
+        $body .= " - Qty " . $quantity . " - Location: " . htmlspecialchars($location) . "</p>";
+        notify_admins($subject, $body);
+        
         header('Location: dashboard.php');
         exit;
     } catch (PDOException $e) {
@@ -39,7 +54,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <?php include 'includes/header.php'; ?>
+
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
 <?php include 'includes/navbar.php'; ?>
 
 <div class="container mt-5">
@@ -67,9 +84,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="mb-3" id="variant_container" style="display:none;">
             <label for="variant_id" class="form-label">Variant</label>
             <select class="form-select" id="variant_id" name="variant_id">
-                <!-- Filled by JS -->
+                <option value="">None</option>
             </select>
-            <small class="text-muted">No variants available for this item.</small>
+            <small class="text-muted" id="no_variants_msg" style="display:none;">No variants available for this item.</small>
         </div>
         <div class="mb-3" id="other_field" style="display:none;">
             <label for="other" class="form-label">Other Item (max 25 chars)</label>
@@ -112,9 +129,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             var item = $(this).val();
             var $variantContainer = $('#variant_container');
             var $variantSelect = $('#variant_id');
+            var $noMsg = $('#no_variants_msg');
             
             $variantContainer.hide();
-            $variantSelect.empty().prop('disabled', true); // Start disabled
+            $variantSelect.empty().prop('disabled', true);
+            $noMsg.hide();
             $('#other_field').hide();
             
             if (item === 'other') {
@@ -122,23 +141,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else if (item) {
                 $.get('api_variants.php', { item: item }, function(variants) {
                     $variantSelect.empty();
+                    $variantSelect.append('<option value="">None</option>');
                     if (variants.length > 0) {
-                        $variantSelect.append('<option value="">-- Select Variant --</option>');
                         variants.forEach(function(v) {
                             $variantSelect.append('<option value="' + v.id + '">' + v.name + '</option>');
                         });
-                        $variantSelect.prop('disabled', false); // Enable when variants exist
-                        $variantContainer.find('small').hide();
+                        $variantSelect.prop('disabled', false);
                     } else {
-                        $variantSelect.append('<option value="" selected>N/A</option>');
-                        $variantSelect.prop('disabled', true); // Grey out N/A
-                        $variantContainer.find('small').show();
+                        $variantSelect.append('<option value="" selected>N/A</option>').prop('disabled', true);
+                        $noMsg.show();
                     }
                     $variantContainer.show();
-                }, 'json').fail(function() {
-                    $variantSelect.empty().append('<option value="">Error loading variants</option>').prop('disabled', true);
-                    $variantContainer.show();
-                });
+                }, 'json');
             }
         });
     });
