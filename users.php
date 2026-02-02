@@ -3,6 +3,9 @@
 session_start();
 include 'db.php';
 if (!isset($_SESSION['user_id']) || !$_SESSION['is_admin']) {
+
+$current_page = basename(__FILE__);
+
     header('Location: login.php');
     exit;
 }
@@ -219,7 +222,7 @@ try {
                                 <button type="submit" name="toggle_notify" class="btn btn-sm btn-info">Toggle Notifications</button>
                             </form>
                             <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editUserModal<?php echo $u['id']; ?>">Edit Email/Password</button>
-                            <a href="users.php?delete_id=<?php echo $u['id']; ?>" class="btn btn-sm btn-danger" onclick="return confirm('Delete this user?');">Delete</a>
+                            <a href="users.php?delete_id=<?php echo $u['id']; ?>" class="btn btn-sm bg-secondary" onclick="return confirm('Delete this user?');">Delete</a>
                         </td>
                     </tr>
                     
@@ -286,7 +289,7 @@ try {
                                 <button type="submit" name="toggle_admin" class="btn btn-sm btn-success">Make Admin</button>
                             </form>
                             <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editUserModal<?php echo $u['id']; ?>">Edit Email/Password</button>
-                            <a href="users.php?delete_id=<?php echo $u['id']; ?>" class="btn btn-sm btn-danger" onclick="return confirm('Delete this user?');">Delete</a>
+                            <a href="users.php?delete_id=<?php echo $u['id']; ?>" class="btn btn-sm btn-secondary" onclick="return confirm('Delete this user?');">Delete</a>
                         </td>
                     </tr>
                     

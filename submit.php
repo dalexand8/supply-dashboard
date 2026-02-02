@@ -4,6 +4,9 @@ session_start();
 include 'db.php';
 include 'includes/notify.php'; // Include at top so function always defined
 if (!isset($_SESSION['user_id'])) {
+
+$current_page = basename(__FILE__);
+
     header('Location: login.php');
     exit;
 }
@@ -124,6 +127,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
         $('#item').append(new Option('Other', 'other', false, false));
         $('#item').val(null).trigger('change');
+        
+        // Dark dropdown + no flash (hide until styled, then fade in)
+        $('#item').on('select2:open', function () {
+            setTimeout(function() {
+                $('.select2-dropdown').css({
+                    'background-color': '#212529',
+                    'border': '1px solid #495057',
+                    'color': '#fff',
+                    'opacity': '1'  // Fade in after dark
+                });
+                $('.select2-results__options').css('background-color', '#212529');
+                $('.select2-results__option').css({
+                    'background-color': '#212529',
+                    'color': '#fff'
+                });
+                $('.select2-results__group').css({
+                    'background-color': '#343a40',
+                    'color': '#adb5bd'
+                });
+                $('.select2-search__field').css({
+                    'background-color': '#343a40',
+                    'color': '#fff',
+                    'border': '1px solid #495057'
+                });
+            }, 150);  // Delay to hide flash
+        });
+        
+        $('#item').on('select2:open', function () {
+    setTimeout(function() {
+        $('.select2-dropdown, .select2-results__options').css('background-color', '#212529');
+        $('.select2-results__option').css({'background-color': '#212529', 'color': '#fff'});
+        $('.select2-results__group').css({'background-color': '#343a40', 'color': '#adb5bd'});
+        $('.select2-search__field').css({'background-color': '#343a40', 'color': '#fff'});
+    }, 50);  // Tiny delay as safety
+});
+        // Hide dropdown initially to prevent flash
+        $('.select2-dropdown').css('opacity', '0');
         
         $('#item').on('change', function() {
             var item = $(this).val();

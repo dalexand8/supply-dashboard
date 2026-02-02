@@ -3,6 +3,9 @@
 session_start();
 require_once 'env.php'; // Load .env (critical for SMTP_EMAIL)
 include 'db.php';
+
+$current_page = basename(__FILE__);
+
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 

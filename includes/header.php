@@ -1,19 +1,154 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Supply Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
-        html, body { height: 100%; }
-        body { display: flex; flex-direction: column; }
-        .content { flex: 1 0 auto; }
-        footer { flex-shrink: 0; }
-        .office-card { transition: transform 0.2s; }
-        .office-card:hover { transform: translateY(-3px); }
+        body { min-height: 100vh; background-color: var(--bs-body-bg); }
+        .sidebar { position: fixed; top: 0; bottom: 0; left: 0; z-index: 100; padding: 0; box-shadow: inset -1px 0 0 rgba(255, 255, 255, .1); }
+        .sidebar .nav-link { color: rgba(255, 255, 255, .75); padding: 0.75rem 1rem; border-radius: 0.375rem; margin: 0.125rem 0.5rem; transition: all 0.2s ease; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background-color: rgba(255, 255, 255, 0.15); }
+        .sidebar .nav-link i { width: 24px; text-align: center; }
+        main { margin-left: 280px; transition: margin-left 0.3s ease; }
+        @media (max-width: 767.98px) { main { margin-left: 0; } }
+        .avatar-img { width: 40px; height: 40px; object-fit: cover; }
+
+        /* Pre-dark the dropdown to kill flash */
+.select2-dropdown,
+.select2-results__options,
+.select2-results__option,
+.select2-results__group {
+    background-color: #212529 !important;
+    color: #fff !important;
+}
+
+.select2-results__group {
+    background-color: #343a40 !important;  /* Slightly lighter for "Beverages" etc. */
+    color: #adb5bd !important;
+}
+
+.select2-search__field {
+    background-color: #343a40 !important;
+    color: #fff !important;
+    border: 1px solid #495057 !important;
+}
+        
+/* Dark trigger box + highlight */
+.select2-container--default .select2-selection--single {
+    background-color: #212529 !important;
+    border: 1px solid #495057 !important;
+    color: #fff !important;
+    height: 38px !important;
+    border-radius: 0.375rem !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #fff !important;
+    line-height: 36px !important;
+    padding-left: 12px !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: #adb5bd !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+    border-color: #adb5bd transparent transparent transparent !important;
+}
+
+.select2-container--open .select2-selection--single .select2-selection__arrow b {
+    border-color: transparent transparent #adb5bd transparent !important;
+}
+
+/* Blue highlight on hover/select */
+.select2-results__option--highlighted {
+    background-color: #0d6efd !important;
+    color: #fff !important;
+}
     </style>
 </head>
-<body>
-    <div class="content">
+<body class="dark">
+    <?php 
+    if (!isset($current_page)) {
+        $current_page = basename(__FILE__);
+    }
+    ?>
+
+    <!-- Desktop Sidebar -->
+    <div class="sidebar bg-dark d-flex flex-column flex-shrink-0 p-3" style="width: 280px;">
+        <a href="dashboard.php" class="d-flex align-items-center mb-3 mb-md-4 mx-3 link-light text-decoration-none">
+            <i class="bi bi-ear fs-3 me-2"></i>
+            <span class="fs-4 fw-semibold">Supply Dashboard</span>
+        </a>
+        <hr class="border-secondary">
+        <ul class="nav nav-pills flex-column mb-auto">
+            <li class="nav-item">
+                <a href="dashboard.php" class="nav-link <?= $current_page === 'dashboard.php' ? 'active' : '' ?>">
+                    <i class="bi bi-house-door"></i> Dashboard
+                </a>
+            </li>
+            <li>
+                <a href="submit.php" class="nav-link <?= $current_page === 'submit.php' ? 'active' : '' ?>">
+                    <i class="bi bi-send"></i> Submit Request
+                </a>
+            </li>
+            <li>
+                <a href="suggest_item.php" class="nav-link <?= $current_page === 'suggest_item.php' ? 'active' : '' ?>">
+                    <i class="bi bi-lightbulb"></i> Suggest New Item
+                </a>
+            </li>
+            <?php if (isset($_SESSION['is_admin']) && $_SESSION['is_admin']): ?>
+            <li>
+                <a href="shopping_list.php" class="nav-link <?= $current_page === 'shopping_list.php' ? 'active' : '' ?>">
+                    <i class="bi bi-cart"></i> Shopping List
+                </a>
+            </li>
+            <li>
+                <a href="admin.php" class="nav-link <?= $current_page === 'admin.php' ? 'active' : '' ?>">
+                    <i class="bi bi-sliders"></i> Admin Panel
+                </a>
+            </li>
+            <li>
+                <a href="users.php" class="nav-link <?= $current_page === 'users.php' ? 'active' : '' ?>">
+                    <i class="bi bi-people"></i> Manage Users
+                </a>
+            </li>
+            <li>
+                <a href="login_activity.php" class="nav-link <?= $current_page === 'login_activity.php' ? 'active' : '' ?>">
+                    <i class="bi bi-clock-history"></i> Login Activity Log
+                </a>
+            </li>
+            <?php endif; ?>
+        </ul>
+        <hr class="border-secondary">
+        <div class="dropdown px-3">
+            <a href="#" class="d-flex align-items-center link-light text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
+                <img src="https://ui-avatars.com/api/?name=<?= urlencode($_SESSION['username'] ?? 'User') ?>&background=0D8ABC&color=fff&bold=true" alt="Avatar" class="rounded-circle me-2 avatar-img">
+                <strong><?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></strong>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-dark text-small shadow">
+                <li><a class="dropdown-item" href="change_password.php">Change Password</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="logout.php">Logout</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Mobile Header -->
+        <nav class="navbar navbar-dark bg-dark shadow-sm">
+            <div class="container-fluid">
+                <button class="btn btn-dark d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas">
+                    <i class="bi bi-list fs-3"></i>
+                </button>
+                <div class="navbar-brand mb-0 h1 ms-3 d-md-none">Supply Dashboard</div>
+            </div>
+        </nav>
+
+        <!-- Page Content -->
+        <div class="container-fluid py-4">

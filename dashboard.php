@@ -3,16 +3,19 @@
 session_start();
 include 'db.php';
 if (!isset($_SESSION['user_id'])) {
+
+$current_page = basename(__FILE__);
+
     header('Location: location.php');
     exit;
 }
 $locations = ['Turlock office', 'Modesto office', 'Merced office', 'Atwater Office', 'Sonora office'];
 $location_colors = [
-    'Turlock office' => 'bg-success',
-    'Modesto office' => 'bg-info',
-    'Merced office' => 'bg-warning',
-    'Atwater Office' => 'bg-danger',
-    'Sonora office' => 'bg-primary'
+    'Turlock office' => 'bg-secondary',
+    'Modesto office' => 'bg-secondary',
+    'Merced office' => 'bg-secondary',
+    'Atwater Office' => 'bg-secondary',
+    'Sonora office' => 'bg-secondary'
 ];
 $requests_by_location = [];
 $error = '';
@@ -69,10 +72,10 @@ try {
                             <a href="edit.php?id=<?php echo $req['id']; ?>" class="btn btn-sm btn-warning float-end me-2">Edit</a>
                         <?php endif; ?>
                         <?php if ($_SESSION['user_id'] == $req['user_id'] && $req['status'] == 'Pending'): ?>
-                            <a href="delete_my_request.php?id=<?php echo $req['id']; ?>" class="btn btn-sm btn-danger float-end me-2" onclick="return confirm('Are you sure?');">Delete</a>
+                            <a href="delete_my_request.php?id=<?php echo $req['id']; ?>" class="btn btn-sm bg-secondary float-end me-3" onclick="return confirm('Are you sure?');">Delete</a>
                         <?php endif; ?>
                         <?php if ($_SESSION['is_admin']): ?>
-                            <a href="delete_request.php?id=<?php echo $req['id']; ?>" class="btn btn-sm btn-danger float-end" onclick="return confirm('Are you sure?');">Admin Delete</a>
+                            <a href="delete_request.php?id=<?php echo $req['id']; ?>" class="btn btn-sm bg-secondary float-end me-3" onclick="return confirm('Are you sure?');">Admin Delete</a>
                         <?php endif; ?>
                     </li>
                 <?php endforeach; ?>

@@ -3,6 +3,9 @@
 session_start();
 include 'db.php';
 if (!isset($_SESSION['user_id']) || !$_SESSION['is_admin'] || $_SERVER['REQUEST_METHOD'] !== 'POST') {
+
+$current_page = basename(__FILE__);
+
     header('Location: admin.php');
     exit;
 }

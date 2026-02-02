@@ -3,6 +3,9 @@
 session_start();
 include 'db.php';
 
+
+$current_page = basename(__FILE__);
+
 // Include notify.php at top with error check
 if (file_exists('includes/notify.php')) {
     include 'includes/notify.php';

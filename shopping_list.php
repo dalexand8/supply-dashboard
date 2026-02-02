@@ -4,6 +4,9 @@ session_start();
 require_once 'env.php'; // Loads .env
 include 'db.php';
 if (!isset($_SESSION['user_id']) || !$_SESSION['is_admin']) {
+
+$current_page = basename(__FILE__);
+
     header('Location: login.php');
     exit;
 }

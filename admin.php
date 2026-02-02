@@ -3,6 +3,9 @@
 session_start();
 include 'db.php';
 if (!isset($_SESSION['user_id']) || !$_SESSION['is_admin']) {
+
+$current_page = basename(__FILE__);
+
     header('Location: login.php');
     exit;
 }
@@ -163,8 +166,8 @@ $category_options = getOptions($pdo, 'categories');
                     <small class="text-muted"> - Suggested by <?php echo htmlspecialchars($sug['username']); ?></small>
                 </div>
                 <div>
-                    <a href="approve.php?sug_id=<?php echo $sug['id']; ?>" class="btn btn-sm btn-success me-2">Approve</a>
-                    <a href="reject_suggestion.php?sug_id=<?php echo $sug['id']; ?>" class="btn btn-sm btn-danger" onclick="return confirm('Reject this suggestion?');">Reject</a>
+                    <a href="approve.php?sug_id=<?php echo $sug['id']; ?>" class="btn btn-sm btn-success me-">Approve</a>
+                    <a href="reject_suggestion.php?sug_id=<?php echo $sug['id']; ?>" class="btn btn-sm bg-secondary" onclick="return confirm('Reject this suggestion?');">Reject</a>
                 </div>
             </li>
         <?php endforeach; ?>
@@ -189,7 +192,7 @@ $category_options = getOptions($pdo, 'categories');
                     <td><?php echo htmlspecialchars($cat['name']); ?></td>
                     <td>
                         <a href="edit_category.php?id=<?php echo $cat['id']; ?>" class="btn btn-sm btn-warning">Edit</a>
-                        <a href="delete_category.php?id=<?php echo $cat['id']; ?>" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure? Items in this category will be uncategorized.');">Delete</a>
+                        <a href="delete_category.php?id=<?php echo $cat['id']; ?>" class="btn btn-sm bg-secondary" onclick="return confirm('Are you sure? Items in this category will be uncategorized.');">Delete</a>
                     </td>
                 </tr>
             <?php endforeach; ?>
@@ -283,7 +286,7 @@ $category_options = getOptions($pdo, 'categories');
                     </td>
                     <td>
                         <a href="edit_item.php?id=<?php echo $item['id']; ?>" class="btn btn-sm btn-warning">Edit Item</a>
-                        <a href="delete_item.php?id=<?php echo $item['id']; ?>" class="btn btn-sm btn-danger" onclick="return confirm('Delete item?');">Delete Item</a>
+                        <a href="delete_item.php?id=<?php echo $item['id']; ?>" class="btn btn-sm bg-secondary" onclick="return confirm('Delete item?');">Delete Item</a>
                     </td>
                 </tr>
             <?php endforeach; ?>
