@@ -7,37 +7,71 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <style>
-        body { min-height: 100vh; background-color: var(--bs-body-bg); }
-        .sidebar { position: fixed; top: 0; bottom: 0; left: 0; z-index: 100; padding: 0; box-shadow: inset -1px 0 0 rgba(255, 255, 255, .1); }
-        .sidebar .nav-link { color: rgba(255, 255, 255, .75); padding: 0.75rem 1rem; border-radius: 0.375rem; margin: 0.125rem 0.5rem; transition: all 0.2s ease; }
-        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background-color: rgba(255, 255, 255, 0.15); }
-        .sidebar .nav-link i { width: 24px; text-align: center; }
-        main { margin-left: 280px; transition: margin-left 0.3s ease; }
-        @media (max-width: 767.98px) { main { margin-left: 0; } }
-        .avatar-img { width: 40px; height: 40px; object-fit: cover; }
+<style>
+    body { min-height: 100vh; background-color: var(--bs-body-bg); }
+    .sidebar { position: fixed; top: 0; bottom: 0; left: 0; z-index: 100; padding: 0; box-shadow: inset -1px 0 0 rgba(255, 255, 255, .1); }
+    .sidebar .nav-link { color: rgba(255, 255, 255, .75); padding: 0.75rem 1rem; border-radius: 0.375rem; margin: 0.125rem 0.5rem; transition: all 0.2s ease; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background-color: rgba(255, 255, 255, 0.15); }
+    .sidebar .nav-link i { width: 24px; text-align: center; }
+    main { margin-left: 280px; transition: margin-left 0.3s ease; }
+    @media (max-width: 767.98px) { main { margin-left: 0; } }
+    .avatar-img { width: 40px; height: 40px; object-fit: cover; }
 
-        /* Pre-dark the dropdown to kill flash */
+ /* Full polished + bigger Select2 dropdown in dark mode */
 .select2-dropdown,
 .select2-results__options,
-.select2-results__option,
-.select2-results__group {
+.select2-results__option {
     background-color: #212529 !important;
     color: #fff !important;
+    font-size: 1rem !important; /* Bigger text */
+    padding: 8px 0 !important;
 }
 
 .select2-results__group {
-    background-color: #343a40 !important;  /* Slightly lighter for "Beverages" etc. */
+    background-color: #343a40 !important; /* Lighter for groups */
     color: #adb5bd !important;
+    font-weight: bold !important;
+    font-size: 1.1rem !important; /* Bolder/bigger groups */
+    padding: 12px 16px !important;
+}
+
+.select2-search--dropdown {
+    padding: 8px 12px !important;
+    background-color: #212529 !important; /* No black bar/shadow */
+}
+/* Taller/cleaner Select2 dropdown (no search, more items visible) */
+.select2-dropdown {
+    max-height: 400px !important; /* Taller - shows ~15-20 items */
+}
+
+.select2-results__group {
+    padding: 10px 12px !important;
+    font-weight: bold !important;
+    font-size: 1.1rem !important;
+}
+
+.select2-results__option {
+    padding: 10px 12px !important;
+    font-size: 1rem !important;
 }
 
 .select2-search__field {
-    background-color: #343a40 !important;
+    background-color: #343a40 !important; /* Subtle gray */
     color: #fff !important;
     border: 1px solid #495057 !important;
+    border-radius: 0.375rem !important;
+    font-size: 1rem !important;
+    padding: 8px 12px !important;
 }
-        
-/* Dark trigger box + highlight */
+
+/* Bigger dropdown overall */
+.select2-dropdown {
+    min-width: 400px !important; /* Wider */
+    max-width: none !important;
+    border-radius: 0.5rem !important;
+}
+
+/* Dark trigger box (your existing - kept/strengthened) */
 .select2-container--default .select2-selection--single {
     background-color: #212529 !important;
     border: 1px solid #495057 !important;
@@ -64,12 +98,29 @@
     border-color: transparent transparent #adb5bd transparent !important;
 }
 
-/* Blue highlight on hover/select */
+/* Blue highlight */
 .select2-results__option--highlighted {
     background-color: #0d6efd !important;
     color: #fff !important;
 }
-    </style>
+
+    /* Nicer active accordion header in dark mode */
+    .accordion-button:not(.collapsed) {
+        background-color: #343a40 !important; /* Darker gray */
+        color: #fff !important;
+        box-shadow: inset 0 -1px 0 rgba(0,0,0,.125);
+    }
+
+    .accordion-button:focus {
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); /* Keep subtle blue glow */
+        background-color: #343a40 !important;
+        color: #fff !important;
+    }
+
+    .accordion-button:hover {
+        background-color: #495057 !important; /* Slightly lighter on hover */
+    }
+</style>
 </head>
 <body class="dark">
     <?php 

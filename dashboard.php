@@ -4,21 +4,25 @@ session_start();
 include 'db.php';
 if (!isset($_SESSION['user_id'])) {
 
+require_once 'vendor/autoload.php';  // For dotenv
+
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv->load();
+
 $current_page = basename(__FILE__);
 
     header('Location: location.php');
     exit;
 }
-$locations = ['Turlock office', 'Modesto office', 'Merced office', 'Atwater Office', 'Sonora office'];
-$location_colors = [
-    'Turlock office' => 'bg-secondary',
-    'Modesto office' => 'bg-secondary',
-    'Merced office' => 'bg-secondary',
-    'Atwater Office' => 'bg-secondary',
-    'Sonora office' => 'bg-secondary'
-];
-$requests_by_location = [];
-$error = '';
+$locations = array_filter(array_map('trim', explode(',', $_ENV['OFFICE_LOCATIONS'] ?? '')));
+
+$color_json = $_ENV['OFFICE_COLORS'] ?? '{}';
+$location_colors = json_decode($color_json, true);  // Associative array from JSON
+
+if (!is_array($location_colors)) {
+    $location_colors = [];  // Fallback if bad JSON
+}
+
 try {
     foreach ($locations as $loc) {
         $stmt = $pdo->prepare("

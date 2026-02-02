@@ -127,6 +127,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
         $('#item').append(new Option('Other', 'other', false, false));
         $('#item').val(null).trigger('change');
+        // Placeholder in dropdown search bar
+        $('#item').on('select2:open', function () {
+            $('.select2-search__field').attr('placeholder', 'Search items or categories...');
+        });
         
         // Dark dropdown + no flash (hide until styled, then fade in)
         $('#item').on('select2:open', function () {
@@ -181,7 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else if (item) {
                 $.get('api_variants.php', { item: item }, function(variants) {
                     $variantSelect.empty();
-                    $variantSelect.append('<option value="">None</option>');
+                    $variantSelect.append('<option value="">Select Variant</option>');
                     if (variants.length > 0) {
                         variants.forEach(function(v) {
                             $variantSelect.append('<option value="' + v.id + '">' + v.name + '</option>');
