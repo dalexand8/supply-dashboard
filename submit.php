@@ -1,15 +1,24 @@
 <?php
-// submit.php - Fixed notifications (only on success)
-require 'includes/auth.php';
-include 'includes/notify.php'; // Include at top so function always defined
-if (!isset($_SESSION['user_id'])) {
+// submit.php
+require 'includes/auth.php';  // Auth + session/db
+
+require_once 'vendor/autoload.php';  // Dotenv (safe if already loaded)
+
+include 'includes/notify.php';  // <-- Add this
+
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv->load();
 
 $current_page = basename(__FILE__);
 
-    header('Location: login.php');
-    exit;
+// Locations from .env (no hardcoded)
+$locations = array_filter(array_map('trim', explode(',', $_ENV['OFFICE_LOCATIONS'] ?? '')));
+
+// Fallback if empty
+if (empty($locations)) {
+    $locations = ['Turlock office'];  // Temporary default
 }
-$locations = ['Turlock office', 'Modesto office', 'Merced office', 'Atwater Office', 'Sonora office'];
+
 $error = '';
 $success = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -54,15 +63,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Error submitting request: ' . $e->getMessage();
     }
 }
+
+include 'includes/header.php';
 ?>
-<?php include 'includes/header.php'; ?>
 
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
-<?php include 'includes/navbar.php'; ?>
-
-<div class="container mt-5">
-    <h2>Submit Supply Request</h2>
+<div class="container py-4">
+    <h2 class="mb-4">Submit Supply Request</h2>
     <?php if ($success): ?>
         <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
     <?php endif; ?>
@@ -74,19 +82,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <label for="location" class="form-label">Location</label>
             <select class="form-select" id="location" name="location" required>
                 <?php foreach ($locations as $loc): ?>
-                    <option value="<?php echo $loc; ?>"><?php echo $loc; ?></option>
+                    <option value="<?php echo htmlspecialchars($loc); ?>"><?php echo htmlspecialchars($loc); ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
         <div class="mb-3">
             <label for="item" class="form-label">Item</label>
-            <select class="form-select js-example-basic-single" id="item" name="item" required>
-            </select>
+            <select class="form-select" id="item" name="item" required></select>
         </div>
         <div class="mb-3" id="variant_container" style="display:none;">
             <label for="variant_id" class="form-label">Variant</label>
             <select class="form-select" id="variant_id" name="variant_id">
-                <option value="">None</option>
+                <option value="">Select Variant</option>
             </select>
             <small class="text-muted" id="no_variants_msg" style="display:none;">No variants available for this item.</small>
         </div>
@@ -99,8 +106,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="1" required>
         </div>
         <button type="submit" class="btn btn-primary">Submit</button>
+        <a href="dashboard.php" class="btn btn-secondary ms-3">Back to Dashboard</a>
     </form>
-    <a href="dashboard.php" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -108,9 +115,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <script>
     $(document).ready(function() {
         $('#item').select2({
-         width: '100%',  // Full width of form
-    dropdownAutoWidth: true,  // Expands if needed   
-        placeholder: 'Select an item',
+            width: '100%',
+            dropdownAutoWidth: true,
+            placeholder: 'Select an item',
             allowClear: true,
             ajax: {
                 url: 'api_items.php',
@@ -126,21 +133,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             },
             minimumInputLength: 0
         });
+
         $('#item').append(new Option('Other', 'other', false, false));
         $('#item').val(null).trigger('change');
+
         // Placeholder in dropdown search bar
         $('#item').on('select2:open', function () {
             $('.select2-search__field').attr('placeholder', 'Search items or categories...');
         });
-        
-        // Dark dropdown + no flash (hide until styled, then fade in)
+
+        // Dark dropdown + no flash
         $('#item').on('select2:open', function () {
             setTimeout(function() {
                 $('.select2-dropdown').css({
                     'background-color': '#212529',
                     'border': '1px solid #495057',
                     'color': '#fff',
-                    'opacity': '1'  // Fade in after dark
+                    'opacity': '1'
                 });
                 $('.select2-results__options').css('background-color', '#212529');
                 $('.select2-results__option').css({
@@ -156,20 +165,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'color': '#fff',
                     'border': '1px solid #495057'
                 });
-            }, 150);  // Delay to hide flash
+            }, 150);
         });
-        
-        $('#item').on('select2:open', function () {
-    setTimeout(function() {
-        $('.select2-dropdown, .select2-results__options').css('background-color', '#212529');
-        $('.select2-results__option').css({'background-color': '#212529', 'color': '#fff'});
-        $('.select2-results__group').css({'background-color': '#343a40', 'color': '#adb5bd'});
-        $('.select2-search__field').css({'background-color': '#343a40', 'color': '#fff'});
-    }, 50);  // Tiny delay as safety
-});
-        // Hide dropdown initially to prevent flash
-        $('.select2-dropdown').css('opacity', '0');
-        
+
+        // Variant load
         $('#item').on('change', function() {
             var item = $(this).val();
             var $variantContainer = $('#variant_container');

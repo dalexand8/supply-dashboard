@@ -137,7 +137,7 @@
     <!-- Desktop Sidebar -->
     <div class="sidebar bg-dark d-flex flex-column flex-shrink-0 p-3" style="width: 280px;">
         <a href="dashboard.php" class="d-flex align-items-center mb-3 mb-md-4 mx-3 link-light text-decoration-none">
-            <i class="bi bi-speedometer2 fs-3 me-2"></i>
+            <i class="bi bi-ear fs-3 me-2"></i>
             <span class="fs-4 fw-semibold">Supply Dashboard</span>
         </a>
         <hr class="border-secondary">

@@ -1,30 +1,42 @@
 <?php
-// delete_my_request.php - User delete own pending requests
 session_start();
-include 'db.php';
+require 'db.php';
+
 if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
     exit;
 }
-if (isset($_GET['id'])) {
-    $req_id = (int)$_GET['id'];
-    try {
-        $stmt = $pdo->prepare("SELECT user_id, status FROM requests WHERE id = ?");
-        $stmt->execute([$req_id]);
-        $req = $stmt->fetch();
-       
-        if ($req && $req['user_id'] == $_SESSION['user_id'] && $req['status'] == 'Pending') {
-            $delete_stmt = $pdo->prepare("DELETE FROM requests WHERE id = ?");
-            $delete_stmt->execute([$req_id]);
-            $_SESSION['success'] = 'Request deleted successfully';
-        } else {
-            $_SESSION['error'] = 'This has already been processed';
-        }
-    } catch (PDOException $e) {
-        error_log("Error: " . $e->getMessage());
-        $_SESSION['error'] = 'Database error';
-    }
+
+$id = (int)($_GET['id'] ?? 0);
+if (!$id) {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'error' => 'Invalid ID']);
+    exit;
 }
-header('Location: dashboard.php');
-exit;
+
+try {
+    // Get old status + check ownership/Pending
+    $stmt = $pdo->prepare("SELECT status FROM requests WHERE id = ? AND user_id = ? AND status = 'Pending'");
+    $stmt->execute([$id, $_SESSION['user_id']]);
+    $old_status = $stmt->fetchColumn();
+
+    if (!$old_status) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => 'Not your Pending request']);
+        exit;
+    }
+
+    // Delete
+    $delete = $pdo->prepare("DELETE FROM requests WHERE id = ?");
+    $delete->execute([$id]);
+
+    header('Content-Type: application/json');
+    echo json_encode(['success' => true, 'status' => $old_status]);
+    exit;
+} catch (PDOException $e) {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'error' => 'Delete failed']);
+    exit;
+}
 ?>
