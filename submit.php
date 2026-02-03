@@ -109,7 +109,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <script>
     $(document).ready(function() {
         $('#item').select2({
-            placeholder: 'Select an item',
+         width: '100%',  // Full width of form
+    dropdownAutoWidth: true,  // Expands if needed   
+        placeholder: 'Select an item',
             allowClear: true,
             ajax: {
                 url: 'api_items.php',

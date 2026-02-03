@@ -1,9 +1,9 @@
-</div> <!-- Close container-fluid -->
+        </div> <!-- Close container-fluid py-4 -->
+    </main> <!-- Close main flex-grow-1 -->
 
-        <footer class="bg-dark text-white text-center py-3 mt-5 border-top border-secondary">
-            <p>&copy; <?= date('Y') ?> Supply Dashboard.</p>
-        </footer>
-    </main>
+    <footer class="mt-auto bg-dark text-white text-center py-3 border-top border-secondary">
+        <p>&copy; <?= date('Y') ?> Supply Dashboard. All rights reserved.</p>
+    </footer>
 
     <!-- Mobile Offcanvas Sidebar -->
     <div class="offcanvas offcanvas-start bg-dark text-white" tabindex="-1" id="sidebarOffcanvas" style="width: 280px;">
