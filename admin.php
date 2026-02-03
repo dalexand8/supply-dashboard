@@ -270,7 +270,23 @@ include 'includes/header.php';
         </div>
     </div>
 </div>
-
+<!-- Database Backup -->
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button fw-bold collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBackup" aria-expanded="false" aria-controls="collapseBackup">
+                    <i class="bi bi-database-down me-2"></i> Database Backup
+                </button>
+            </h2>
+            <div id="collapseBackup" class="accordion-collapse collapse">
+                <div class="accordion-body">
+                    <p class="mb-3">Create a full backup of the database (SQL file download).</p>
+                    <form method="POST" action="backup.php">
+                        <button type="submit" class="btn btn-primary">Download Backup Now</button>
+                    </form>
+                    <small class="text-muted d-block mt-3">Backup includes all tables (users, requests, items, variants, categories, suggestions, logs).</small>
+                </div>
+            </div>
+        </div>
 <script>
     const itemsTbody = document.getElementById('items-tbody');
     const itemsTotal = document.getElementById('items-total');
