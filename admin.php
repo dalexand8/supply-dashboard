@@ -1,6 +1,5 @@
 <?php
-session_start();
-require 'db.php';
+require 'includes/auth.php';
 
 if (!isset($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
     header('Location: dashboard.php');

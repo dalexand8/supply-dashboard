@@ -1,7 +1,5 @@
 <?php
-// suggest_item.php - Fixed with error checking for notifications
-session_start();
-include 'db.php';
+require 'includes/auth.php';
 
 
 $current_page = basename(__FILE__);

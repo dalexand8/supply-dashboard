@@ -1,8 +1,6 @@
 <?php
-// edit.php - Fixed variant dropdown (unique by name)
-session_start();
+require 'includes/auth.php';
 require_once 'env.php'; // Load .env (critical for SMTP_EMAIL)
-include 'db.php';
 
 $current_page = basename(__FILE__);
 

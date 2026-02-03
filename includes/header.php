@@ -8,134 +8,124 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
-        body { min-height: 100vh; background-color: var(--bs-body-bg); }
-        .sidebar { position: fixed; top: 0; bottom: 0; left: 0; z-index: 100; padding: 0; box-shadow: inset -1px 0 0 rgba(255, 255, 255, .1); }
-        .sidebar .nav-link { color: rgba(255, 255, 255, .75); padding: 0.75rem 1rem; border-radius: 0.375rem; margin: 0.125rem 0.5rem; transition: all 0.2s ease; }
-        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background-color: rgba(255, 255, 255, 0.15); }
-        .sidebar .nav-link i { width: 24px; text-align: center; }
-        main { margin-left: 280px; transition: margin-left 0.3s ease; }
-        @media (max-width: 767.98px) { main { margin-left: 0; } }
-        .avatar-img { width: 40px; height: 40px; object-fit: cover; }
+    body { min-height: 100vh; background-color: var(--bs-body-bg); }
+    .sidebar { position: fixed; top: 0; bottom: 0; left: 0; z-index: 100; padding: 0; box-shadow: inset -1px 0 0 rgba(255, 255, 255, .1); }
+    .sidebar .nav-link { color: rgba(255, 255, 255, .75); padding: 0.75rem 1rem; border-radius: 0.375rem; margin: 0.125rem 0.5rem; transition: all 0.2s ease; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background-color: rgba(255, 255, 255, 0.15); }
+    .sidebar .nav-link i { width: 24px; text-align: center; }
+    main { margin-left: 280px; transition: margin-left 0.3s ease; }
+    @media (max-width: 767.98px) { main { margin-left: 0; } }
+    .avatar-img { width: 40px; height: 40px; object-fit: cover; }
 
-        /* Pre-dark the dropdown to kill flash */
-        .select2-dropdown,
-        .select2-results__options,
-        .select2-results__option,
-        .select2-results__group {
-            background-color: #212529 !important;
-            color: #fff !important;
-        }
-/* Bigger/taller dropdown + locked dark trigger box */
-.select2-dropdown {
-    min-width: 600px !important; /* Wider - change to 700px+ */
-    max-width: none !important;
-    max-height: 800px !important; /* Taller - more items */
-    border-radius: 0.5rem !important;
-    background-color: #212529 !important;
-}
+    /* Bigger/taller dropdown + locked dark trigger box */
+    .select2-dropdown {
+        min-width: 600px !important; /* Wider - change to 700px+ */
+        max-width: none !important;
+        max-height: 800px !important; /* Taller - more items */
+        border-radius: 0.5rem !important;
+        background-color: #212529 !important;
+    }
 
-.select2-results__options {
-    max-height: 800px !important; /* Key for tall scrollable list */
-}
+    .select2-results__options {
+        max-height: 800px !important; /* Key for tall scrollable list */
+    }
 
-.select2-results__option {
-    padding: 14px 18px !important; /* Bigger rows */
-    font-size: 1.2rem !important; /* Bigger text */
-    background-color: #212529 !important;
-    color: #fff !important;
-}
+    .select2-results__option {
+        padding: 14px 18px !important; /* Bigger rows */
+        font-size: 1.2rem !important; /* Bigger text */
+        background-color: #212529 !important;
+        color: #fff !important;
+    }
 
-.select2-results__group {
-    padding: 14px 18px !important;
-    font-size: 1.3rem !important;
-    font-weight: bold !important;
-    background-color: #343a40 !important;
-    color: #adb5bd !important;
-}
+    .select2-results__group {
+        padding: 14px 18px !important;
+        font-size: 1.3rem !important;
+        font-weight: bold !important;
+        background-color: #343a40 !important;
+        color: #adb5bd !important;
+    }
 
-/* Search field subtle */
-.select2-search--dropdown {
-    padding: 12px 16px !important;
-    background-color: #212529 !important;
-}
+    /* Search field subtle */
+    .select2-search--dropdown {
+        padding: 12px 16px !important;
+        background-color: #212529 !important;
+    }
 
-.select2-search__field {
-    background-color: #343a40 !important;
-    color: #fff !important;
-    border: 1px solid #495057 !important;
-    border-radius: 0.375rem !important;
-    padding: 12px 16px !important;
-    font-size: 1.2rem !important;
-}
+    .select2-search__field {
+        background-color: #343a40 !important;
+        color: #fff !important;
+        border: 1px solid #495057 !important;
+        border-radius: 0.375rem !important;
+        padding: 12px 16px !important;
+        font-size: 1.2rem !important;
+    }
 
-/* Locked dark trigger box - stronger overrides */
-.select2-container--default .select2-selection--single,
-.select2-container--default .select2-selection--single .select2-selection__rendered,
-.select2-container--default .select2-selection--single .select2-selection__placeholder {
-    background-color: #212529 !important;
-    border: 1px solid #495057 !important;
-    color: #fff !important;
-}
+    /* Locked dark trigger box - stronger overrides (no light border/glow on placeholder/load) */
+    .select2-container--default .select2-selection--single {
+        background-color: #212529 !important;
+        border: 1px solid #495057 !important; /* Dark border always */
+        color: #fff !important;
+        height: 38px !important;
+        border-radius: 0.375rem !important;
+        box-shadow: none !important; /* No glow on load */
+        outline: 0 !important;
+    }
 
-.select2-container--default .select2-selection--single {
-    height: 38px !important;
-    border-radius: 0.375rem !important;
-}
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        color: #fff !important;
+        line-height: 36px !important;
+        padding-left: 12px !important;
+    }
 
-.select2-container--default .select2-selection--single .select2-selection__rendered {
-    line-height: 36px !important;
-    padding-left: 12px !important;
-}
+    .select2-container--default .select2-selection--single .select2-selection__placeholder {
+        color: #adb5bd !important;
+    }
 
-.select2-container--default .select2-selection--single .select2-selection__placeholder {
-    color: #adb5bd !important;
-}
+    .select2-container--default .select2-selection--single .select2-selection__arrow b {
+        border-color: #adb5bd transparent transparent transparent !important;
+    }
 
-.select2-container--default .select2-selection--single .select2-selection__arrow b {
-    border-color: #adb5bd transparent transparent transparent !important;
-}
+    .select2-container--open .select2-selection--single .select2-selection__arrow b {
+        border-color: transparent transparent #adb5bd transparent !important;
+    }
 
-.select2-container--open .select2-selection--single .select2-selection__arrow b {
-    border-color: transparent transparent #adb5bd transparent !important;
-}
+    /* Remove light focus glow/border on load/placeholder - subtle blue only on real focus */
+    .select2-container--default .select2-selection--single:focus,
+    .select2-container--default.select2-container--focus .select2-selection--single {
+        border-color: #495057 !important; /* Dark border */
+        box-shadow: none !important; /* No light glow on load */
+        outline: 0 !important;
+    }
 
-/* Blue highlight */
-.select2-results__option--highlighted {
-    background-color: #0d6efd !important;
-    color: #fff !important;
+    .select2-container--default.select2-container--open .select2-selection--single,
+    .select2-container--default .select2-selection--single:active {
+        border-color: #0d6efd !important; /* Blue border on open/focus */
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important; /* Subtle blue glow */
+    }
 
-    /* Your existing rules here... */
+    /* Blue highlight */
+    .select2-results__option--highlighted {
+        background-color: #0d6efd !important;
+        color: #fff !important;
+    }
 
-/* Remove light focus box/glow on Select2 trigger in dark mode */
-.select2-container--default .select2-selection--single:focus,
-.select2-container--default .select2-selection--single.form-control:focus {
-    border-color: #495057 !important; /* Dark border */
-    box-shadow: none !important; /* Kill light glow */
-    outline: 0 !important;
-}
+    /* Nicer active accordion header in dark mode */
+    .accordion-button:not(.collapsed) {
+        background-color: #343a40 !important;
+        color: #fff !important;
+        box-shadow: inset 0 -1px 0 rgba(0,0,0,.125);
+    }
 
-.select2-container--default.select2-container--focus .select2-selection--single {
-    border-color: #0d6efd !important; /* Subtle blue on focus */
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important; /* Dark-friendly blue glow */
-}
+    .accordion-button:focus {
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        background-color: #343a40 !important;
+        color: #fff !important;
+    }
 
-        /* Nicer active accordion header in dark mode */
-        .accordion-button:not(.collapsed) {
-            background-color: #343a40 !important; /* Darker gray */
-            color: #fff !important;
-            box-shadow: inset 0 -1px 0 rgba(0,0,0,.125);
-        }
-
-        .accordion-button:focus {
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); /* Keep subtle blue glow */
-            background-color: #343a40 !important;
-            color: #fff !important;
-        }
-
-        .accordion-button:hover {
-            background-color: #495057 !important; /* Slightly lighter on hover */
-        }
-    </style>
+    .accordion-button:hover {
+        background-color: #495057 !important;
+    }
+</style>
 </head>
 <body class="d-flex flex-column min-vh-100">
     <?php 

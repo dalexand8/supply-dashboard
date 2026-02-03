@@ -1,7 +1,6 @@
 <?php
 // submit.php - Fixed notifications (only on success)
-session_start();
-include 'db.php';
+require 'includes/auth.php';
 include 'includes/notify.php'; // Include at top so function always defined
 if (!isset($_SESSION['user_id'])) {
 

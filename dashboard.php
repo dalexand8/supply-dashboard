@@ -1,7 +1,6 @@
 <?php
 // dashboard.php - Fixed to show variants
-session_start();
-include 'db.php';
+require 'includes/auth.php';
 if (!isset($_SESSION['user_id'])) {
 
 require_once 'vendor/autoload.php';  // For dotenv

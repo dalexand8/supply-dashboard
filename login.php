@@ -58,9 +58,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </nav>
     <div class="container mt-5 content">
-        <h2>Login</h2>
+  <h2>Login</h2>
         <?php if ($error): ?>
             <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
+        <?php endif; ?>
+        <?php if (isset($_GET['expired'])): ?>
+            <div class="alert alert-warning">Session expired — please login again.</div>
         <?php endif; ?>
         <form method="POST">
             <div class="mb-3">

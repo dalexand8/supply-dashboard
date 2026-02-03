@@ -1,8 +1,7 @@
 <?php
 // shopping_list.php - Clean production version (no debug)
-session_start();
-require_once 'env.php'; // Loads .env
-include 'db.php';
+require 'includes/auth.php';
+
 if (!isset($_SESSION['user_id']) || !$_SESSION['is_admin']) {
 
 $current_page = basename(__FILE__);
