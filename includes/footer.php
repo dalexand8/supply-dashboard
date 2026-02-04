@@ -2,7 +2,7 @@
     </main> <!-- Close main flex-grow-1 -->
 
     <footer class="mt-auto bg-dark text-white text-center py-3 border-top border-secondary">
-        <p>&copy; <?= date('Y') ?> Supply Dashboard. All rights reserved.</p>
+        <p>&copy; <?= date('Y') ?> Supply Dashboard.</p>
     </footer>
 
     <!-- Mobile Offcanvas Sidebar -->

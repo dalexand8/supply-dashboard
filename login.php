@@ -105,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </form>
 
         <div class="text-center mt-4">
-            <small class="text-muted">&copy; <?php echo date('Y'); ?> Supply Dashboard. All rights reserved.</small>
+            <small class="text-muted">&copy; <?php echo date('Y'); ?> Supply Dashboard.</small>
         </div>
     </div>
 
