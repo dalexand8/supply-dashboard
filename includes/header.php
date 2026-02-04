@@ -109,22 +109,86 @@
         color: #fff !important;
     }
 
-    /* Nicer active accordion header in dark mode */
-    .accordion-button:not(.collapsed) {
-        background-color: #343a40 !important;
-        color: #fff !important;
-        box-shadow: inset 0 -1px 0 rgba(0,0,0,.125);
-    }
+    /* Clean accordion controls - no blue glow/border, keep custom colors */
+.accordion-button {
+    box-shadow: none !important; /* No glow */
+    border-color: #495057 !important; /* Dark border */
+}
 
-    .accordion-button:focus {
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-        background-color: #343a40 !important;
-        color: #fff !important;
-    }
+.accordion-button.collapsed {
+    box-shadow: none !important;
+}
 
-    .accordion-button:hover {
-        background-color: #495057 !important;
-    }
+.accordion-button:focus {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1) !important; /* Super subtle blue (almost invisible) */
+    border-color: #495057 !important;
+}
+
+.accordion-button:hover {
+    box-shadow: none !important;
+}
+
+.accordion-item {
+    border-color: #495057 !important; /* Dark borders between items */
+}
+/* Kill blue glow/border on accordion - keep custom colors */
+.accordion-button,
+.accordion-button.collapsed,
+.accordion-button:not(.collapsed) {
+    box-shadow: none !important;
+    border-color: #495057 !important; /* Dark border */
+}
+
+.accordion-button:focus,
+.accordion-button:active {
+    box-shadow: none !important;
+    border-color: #495057 !important;
+    outline: none !important;
+}
+
+.accordion-item {
+    border-color: #495057 !important;
+}
+/* Kill blue glow/outline/border on accordion focus/active/collapsed */
+.accordion-button,
+.accordion-button.collapsed,
+.accordion-button:not(.collapsed),
+.accordion-button:focus,
+.accordion-button:active {
+    box-shadow: none !important;
+    outline: none !important;
+    border-color: #495057 !important; /* Dark border */
+}
+
+.accordion-item {
+    border-color: #495057 !important;
+}
+/* Full kill blue glow/outline/border on accordion - keep custom colors */
+.accordion-button,
+.accordion-button.collapsed,
+.accordion-button:not(.collapsed) {
+    box-shadow: none !important;
+    outline: none !important;
+    border-color: #495057 !important; /* Dark border */
+}
+
+.accordion-button:focus,
+.accordion-button:active,
+.accordion-button:focus-visible {
+    box-shadow: none !important;
+    outline: none !important;
+    border-color: #495057 !important;
+}
+
+.accordion-item {
+    border-color: #495057 !important;
+}
+
+/* Arrow clean (no blue tint) */
+.accordion-button::after {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23adb5bd'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e") !important; /* Gray arrow */
+}
+
 </style>
 </head>
 <body class="d-flex flex-column min-vh-100">
@@ -133,6 +197,8 @@
         $current_page = basename(__FILE__);
     }
     ?>
+
+    
 
     <!-- Desktop Sidebar -->
     <div class="sidebar bg-dark d-flex flex-column flex-shrink-0 p-3" style="width: 280px;">
