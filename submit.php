@@ -2,21 +2,20 @@
 // submit.php
 require 'includes/auth.php';  // Auth + session/db
 
-require_once 'vendor/autoload.php';  // Dotenv (safe if already loaded)
-
-include 'includes/notify.php';  // <-- Add this
+require_once 'vendor/autoload.php';  // Dotenv
 
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
+include 'includes/notify.php';  // Notification function
+
 $current_page = basename(__FILE__);
 
-// Locations from .env (no hardcoded)
+// Locations from .env
 $locations = array_filter(array_map('trim', explode(',', $_ENV['OFFICE_LOCATIONS'] ?? '')));
 
-// Fallback if empty
 if (empty($locations)) {
-    $locations = ['Turlock office'];  // Temporary default
+    $locations = ['Turlock office'];  // Fallback
 }
 
 $error = '';
@@ -44,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
        
         $success = 'Request submitted successfully!';
         
-        // Notification on success only
+        // Notification
         $subject = 'New Supply Request';
         $body = "<p>User <strong>" . htmlspecialchars($_SESSION['username']) . "</strong> submitted a request:</p>";
         $body .= "<p><strong>" . htmlspecialchars($item_name) . "</strong>";
@@ -57,10 +56,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $body .= " - Qty " . $quantity . " - Location: " . htmlspecialchars($location) . "</p>";
         notify_admins($subject, $body);
         
+        // AJAX response
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'message' => $success]);
+            exit;
+        }
+        
+        // Normal redirect
         header('Location: dashboard.php');
         exit;
     } catch (PDOException $e) {
         $error = 'Error submitting request: ' . $e->getMessage();
+        
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => $error]);
+            exit;
+        }
     }
 }
 
@@ -71,13 +84,10 @@ include 'includes/header.php';
 
 <div class="container py-4">
     <h2 class="mb-4">Submit Supply Request</h2>
-    <?php if ($success): ?>
-        <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
-    <?php endif; ?>
-    <?php if ($error): ?>
-        <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
-    <?php endif; ?>
-    <form method="POST">
+    
+    <div id="alert-container"></div>
+    
+    <form id="submit-form" method="POST">
         <div class="mb-3">
             <label for="location" class="form-label">Location</label>
             <select class="form-select" id="location" name="location" required>
@@ -105,7 +115,7 @@ include 'includes/header.php';
             <label for="quantity" class="form-label">Quantity</label>
             <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="1" required>
         </div>
-        <button type="submit" class="btn btn-primary">Submit</button>
+        <button type="submit" class="btn btn-primary">Submit Request</button>
         <a href="dashboard.php" class="btn btn-secondary ms-3">Back to Dashboard</a>
     </form>
 </div>
@@ -137,12 +147,12 @@ include 'includes/header.php';
         $('#item').append(new Option('Other', 'other', false, false));
         $('#item').val(null).trigger('change');
 
-        // Placeholder in dropdown search bar
+        // Placeholder in search
         $('#item').on('select2:open', function () {
             $('.select2-search__field').attr('placeholder', 'Search items or categories...');
         });
 
-        // Dark dropdown + no flash
+        // Dark dropdown no flash
         $('#item').on('select2:open', function () {
             setTimeout(function() {
                 $('.select2-dropdown').css({
@@ -198,6 +208,53 @@ include 'includes/header.php';
                     $variantContainer.show();
                 }, 'json');
             }
+        });
+
+        // AJAX form submit
+        $('#submit-form').on('submit', function(e) {
+            e.preventDefault();
+
+            $.ajax({
+                url: 'submit.php',
+                type: 'POST',
+                data: $(this).serialize(),
+                dataType: 'json',
+               success: function(response) {
+    if (response.success) {
+        $('#alert-container').html(`
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <strong>Success!</strong> Request Submitted.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `);
+        // Auto-fade after 5 seconds
+        setTimeout(function() {
+            $('.alert').alert('close');
+        }, 5000);
+
+        // Clear form
+        $('#submit-form')[0].reset();
+        $('#item').val(null).trigger('change');
+        $('#variant_container').hide();
+        $('#other_field').hide();
+    } else {
+        $('#alert-container').html(`
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <strong>Error!</strong> ${response.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `);
+    }
+},
+                error: function() {
+                    $('#alert-container').html(`
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <strong>Error!</strong> Submission failed - try again.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    `);
+                }
+            });
         });
     });
 </script>

@@ -1,5 +1,6 @@
 <?php
-require 'includes/auth.php';
+session_start();
+require 'db.php';
 
 if (!isset($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
     header('Location: dashboard.php');
@@ -57,6 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_variant'])) {
                 $insert = $pdo->prepare("INSERT INTO item_variants (item_id, name) VALUES (?, ?)");
                 $insert->execute([$item_id, $variant_name]);
                 $success = 'Variant added successfully.';
+                // No highlight
             }
         } catch (PDOException $e) {
             $error = 'Error adding variant: ' . $e->getMessage();
@@ -64,7 +66,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_variant'])) {
     } else {
         $error = 'Variant name required.';
     }
-    $scroll_to_item = $item_id;
 }
 
 // Fetch suggestions
@@ -98,6 +99,27 @@ try {
     $error = 'Database error loading categories: ' . $e->getMessage();
     $categories = [];
 }
+
+// Fetch items with pagination
+$total_items = 0;
+$per_page = 10;
+$current_page_num = max(1, (int)($_GET['page'] ?? 1));
+$offset = ($current_page_num - 1) * $per_page;
+
+try {
+    $count_stmt = $pdo->query("SELECT COUNT(*) FROM items");
+    $total_items = $count_stmt->fetchColumn();
+    
+    $stmt = $pdo->prepare("SELECT i.*, c.name as category_name FROM items i LEFT JOIN categories c ON i.category_id = c.id ORDER BY i.name LIMIT ? OFFSET ?");
+    $stmt->bindValue(1, $per_page, PDO::PARAM_INT);
+    $stmt->bindValue(2, $offset, PDO::PARAM_INT);
+    $stmt->execute();
+    $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $error = 'Database error loading items: ' . $e->getMessage();
+    $items = [];
+}
+$total_pages = ceil($total_items / $per_page);
 
 include 'includes/header.php';
 ?>
@@ -156,17 +178,17 @@ include 'includes/header.php';
         </div>
     </div>
 
-    <!-- Accordion for the rest (independent panels, all open) -->
+    <!-- Accordion for the rest -->
     <div class="accordion" id="adminAccordion">
         <!-- Categories Management & Add New Category -->
-       <div class="accordion-item">
-        <h2 class="accordion-header">
-            <button class="accordion-button fw-bold collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCategories" aria-expanded="false" aria-controls="collapseCategories">
-                <i class="bi bi-tags me-2"></i> Categories Management & Add New Category
-            </button>
-        </h2>
-        <div id="collapseCategories" class="accordion-collapse collapse">
-            <div class="accordion-body">
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCategories" aria-expanded="true" aria-controls="collapseCategories">
+                    <i class="bi bi-tags me-2"></i> Categories Management & Add New Category
+                </button>
+            </h2>
+            <div id="collapseCategories" class="accordion-collapse collapse show">
+                <div class="accordion-body">
                     <h4 class="mb-3">Add New Category</h4>
                     <form method="POST" class="mb-4">
                         <div class="input-group">
@@ -204,50 +226,135 @@ include 'includes/header.php';
             </div>
         </div>
 
-        <!-- Items Management with AJAX Pagination (10 rows tall) -->
-    <div class="accordion-item">
-        <h2 class="accordion-header">
-            <button class="accordion-button fw-bold collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseItems" aria-expanded="false" aria-controls="collapseItems">
-                <i class="bi bi-box-seam me-2"></i> Items Management (<span id="items-total">0</span> total)
-            </button>
-        </h2>
-        <div id="collapseItems" class="accordion-collapse collapse">
-            <div class="accordion-body">
-                    <div id="items-table-container">
-                        <table class="table table-dark table-striped align-middle">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Name</th>
-                                    <th>Category</th>
-                                    <th>Variants</th>
-                                    <th>Actions</th>
+        <!-- Items Management -->
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseItems" aria-expanded="true" aria-controls="collapseItems">
+                    <i class="bi bi-box-seam me-2"></i> Items Management (<?php echo $total_items; ?> total)
+                </button>
+            </h2>
+            <div id="collapseItems" class="accordion-collapse collapse show">
+                <div class="accordion-body">
+                    <table class="table table-dark table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Variants</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($items as $item): ?>
+                                <?php
+                                $vstmt = $pdo->prepare("SELECT id, name FROM item_variants WHERE item_id = ? ORDER BY name");
+                                $vstmt->execute([$item['id']]);
+                                $variants = $vstmt->fetchAll(PDO::FETCH_ASSOC);
+                                ?>
+                                <tr id="item-<?php echo $item['id']; ?>">
+                                    <td><?php echo $item['id']; ?></td>
+                                    <td><?php echo htmlspecialchars($item['name']); ?></td>
+                                    <td><?php echo htmlspecialchars($item['category_name'] ?? 'Uncategorized'); ?></td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                                            <?php if (!empty($variants)): ?>
+                                                <?php foreach ($variants as $v): ?>
+                                                    <span class="badge bg-secondary fs-6">
+                                                        <?php echo htmlspecialchars($v['name']); ?>
+                                                        <button type="button" class="btn btn-sm btn-light border-0 p-0 ms-1" data-bs-toggle="modal" data-bs-target="#editVariantModal<?php echo $v['id']; ?>" title="Edit">✎</button>
+                                                        <a href="delete_variant.php?id=<?php echo $v['id']; ?>" class="text-white ms-1" onclick="return confirm('Delete variant?');" title="Delete">×</a>
+                                                    </span>
+                                                    
+                                                    <!-- Edit Variant Modal -->
+                                                    <div class="modal fade" id="editVariantModal<?php echo $v['id']; ?>" tabindex="-1">
+                                                        <div class="modal-dialog modal-sm">
+                                                            <div class="modal-content">
+                                                                <form method="POST" action="edit_variant.php">
+                                                                    <div class="modal-header">
+                                                                        <h5 class="modal-title">Edit Variant</h5>
+                                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                                    </div>
+                                                                    <div class="modal-body">
+                                                                        <input type="hidden" name="variant_id" value="<?php echo $v['id']; ?>">
+                                                                        <input type="text" class="form-control" name="variant_name" value="<?php echo htmlspecialchars($v['name']); ?>" required>
+                                                                    </div>
+                                                                    <div class="modal-footer">
+                                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                        <button type="submit" class="btn btn-primary">Update</button>
+                                                                    </div>
+                                                                </form>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            <?php else: ?>
+                                                <em class="text-muted">None</em>
+                                            <?php endif; ?>
+                                        </div>
+                                        
+                                        <?php if ($scroll_to_item == $item['id'] && $error): ?>
+                                            <div class="alert alert-danger py-1 px-2 mb-2"><?php echo htmlspecialchars($error); ?></div>
+                                        <?php endif; ?>
+                                        
+                                        <form method="POST" class="d-inline">
+                                            <input type="hidden" name="item_id" value="<?php echo $item['id']; ?>">
+                                            <div class="input-group input-group-sm w-auto">
+                                                <input type="text" class="form-control" name="new_variant" placeholder="New variant" required>
+                                                <button type="submit" name="add_variant" class="btn btn-success">Add</button>
+                                            </div>
+                                        </form>
+                                    </td>
+                                    <td>
+                                        <a href="edit_item.php?id=<?php echo $item['id']; ?>" class="btn btn-sm btn-warning">Edit Item</a>
+                                        <a href="delete_item.php?id=<?php echo $item['id']; ?>" class="btn btn-sm bg-secondary" onclick="return confirm('Delete item?');">Delete Item</a>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody id="items-tbody">
-                                <tr><td colspan="5">Loading items...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
+                            <?php endforeach; ?>
+                            <?php if (empty($items)): ?>
+                                <tr><td colspan="5">No items found</td></tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
 
-                    <nav aria-label="Items pagination" id="items-pagination" class="d-none mt-3">
-                        <ul class="pagination justify-content-center" id="pagination-ul">
-                            <!-- Filled by JS -->
-                        </ul>
-                    </nav>
+                    <!-- Pagination -->
+                    <?php if ($total_pages > 1): ?>
+                        <nav aria-label="Items pagination">
+                            <ul class="pagination justify-content-center">
+                                <?php if ($current_page_num > 1): ?>
+                                    <li class="page-item"><a class="page-link" href="?page=1">First</a></li>
+                                    <li class="page-item"><a class="page-link" href="?page=<?php echo $current_page_num - 1; ?>">Previous</a></li>
+                                <?php endif; ?>
+
+                                <?php
+                                $start = max(1, $current_page_num - 2);
+                                $end = min($total_pages, $current_page_num + 2);
+                                for ($i = $start; $i <= $end; $i++): ?>
+                                    <li class="page-item <?php echo $i == $current_page_num ? 'active' : ''; ?>">
+                                        <a class="page-link" href="?page=<?php echo $i; ?>"><?php echo $i; ?></a>
+                                    </li>
+                                <?php endfor; ?>
+
+                                <?php if ($current_page_num < $total_pages): ?>
+                                    <li class="page-item"><a class="page-link" href="?page=<?php echo $current_page_num + 1; ?>">Next</a></li>
+                                    <li class="page-item"><a class="page-link" href="?page=<?php echo $total_pages; ?>">Last</a></li>
+                                <?php endif; ?>
+                            </ul>
+                        </nav>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
 
         <!-- Add New Item -->
-      <div class="accordion-item">
-        <h2 class="accordion-header">
-            <button class="accordion-button fw-bold collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAddItem" aria-expanded="false" aria-controls="collapseAddItem">
-                <i class="bi bi-plus-circle me-2"></i> Add New Item
-            </button>
-        </h2>
-        <div id="collapseAddItem" class="accordion-collapse collapse">
-            <div class="accordion-body">
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAddItem" aria-expanded="true" aria-controls="collapseAddItem">
+                    <i class="bi bi-plus-circle me-2"></i> Add New Item
+                </button>
+            </h2>
+            <div id="collapseAddItem" class="accordion-collapse collapse show">
+                <div class="accordion-body">
                     <h4>Add New Item</h4>
                     <form method="POST">
                         <div class="mb-3">
@@ -268,16 +375,15 @@ include 'includes/header.php';
                 </div>
             </div>
         </div>
-    </div>
-</div>
-<!-- Database Backup -->
+
+        <!-- Database Backup -->
         <div class="accordion-item">
             <h2 class="accordion-header">
-                <button class="accordion-button fw-bold collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBackup" aria-expanded="false" aria-controls="collapseBackup">
+                <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBackup" aria-expanded="true" aria-controls="collapseBackup">
                     <i class="bi bi-database-down me-2"></i> Database Backup
                 </button>
             </h2>
-            <div id="collapseBackup" class="accordion-collapse collapse">
+            <div id="collapseBackup" class="accordion-collapse collapse show">
                 <div class="accordion-body">
                     <p class="mb-3">Create a full backup of the database (SQL file download).</p>
                     <form method="POST" action="backup.php">
@@ -287,140 +393,7 @@ include 'includes/header.php';
                 </div>
             </div>
         </div>
-<script>
-    const itemsTbody = document.getElementById('items-tbody');
-    const itemsTotal = document.getElementById('items-total');
-    const paginationUl = document.getElementById('pagination-ul');
-    const paginationNav = document.getElementById('items-pagination');
-
-    function loadItems(page = 1) {
-        fetch(`api_items_pagination.php?page=${page}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    itemsTbody.innerHTML = `<tr><td colspan="5">Error: ${data.error}</td></tr>`;
-                    return;
-                }
-
-                itemsTotal.textContent = data.total_items;
-
-                let rows = '';
-                if (data.items.length === 0) {
-                    rows = '<tr><td colspan="5">No items found</td></tr>';
-                } else {
-                    data.items.forEach(item => {
-                        let variantsHtml = '<div class="d-flex flex-wrap gap-2 align-items-center mb-2">';
-                        if (item.variants.length > 0) {
-                            item.variants.forEach(v => {
-                                variantsHtml += `<span class="badge bg-secondary fs-6">
-                                    ${v.name}
-                                    <button type="button" class="btn btn-sm btn-light border-0 p-0 ms-1" data-bs-toggle="modal" data-bs-target="#editVariantModal${v.id}" title="Edit">✎</button>
-                                    <a href="delete_variant.php?id=${v.id}" class="text-white ms-1" onclick="return confirm('Delete variant?');" title="Delete">×</a>
-                                </span>`;
-                                variantsHtml += `<div class="modal fade" id="editVariantModal${v.id}" tabindex="-1">
-                                    <div class="modal-dialog modal-sm">
-                                        <div class="modal-content">
-                                            <form method="POST" action="edit_variant.php">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Edit Variant</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <input type="hidden" name="variant_id" value="${v.id}">
-                                                    <input type="text" class="form-control" name="variant_name" value="${v.name}" required>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                    <button type="submit" class="btn btn-primary">Update</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>`;
-                            });
-                        } else {
-                            variantsHtml += '<em class="text-muted">None</em>';
-                        }
-                        variantsHtml += '</div>';
-
-                        variantsHtml += `<form method="POST" class="d-inline">
-                            <input type="hidden" name="item_id" value="${item.id}">
-                            <div class="input-group input-group-sm w-auto">
-                                <input type="text" class="form-control" name="new_variant" placeholder="New variant">
-                                <button type="submit" name="add_variant" class="btn btn-success">Add</button>
-                            </div>
-                        </form>`;
-
-                        rows += `<tr id="item-${item.id}">
-                            <td>${item.id}</td>
-                            <td>${item.name}</td>
-                            <td>${item.category_name || 'Uncategorized'}</td>
-                            <td>${variantsHtml}</td>
-                            <td>
-                                <a href="edit_item.php?id=${item.id}" class="btn btn-sm btn-warning">Edit Item</a>
-                                <a href="delete_item.php?id=${item.id}" class="btn btn-sm bg-secondary" onclick="return confirm('Delete item?');">Delete Item</a>
-                            </td>
-                        </tr>`;
-                    });
-                }
-
-                // Pad to 10 rows for consistent height (no jump on last page)
-                const currentCount = data.items.length || 0;
-                for (let i = currentCount; i < 10; i++) {
-                    rows += '<tr class="table-placeholder"><td colspan="5">&nbsp;</td></tr>';
-                }
-
-                itemsTbody.innerHTML = rows;
-
-                // Pagination
-                if (data.total_pages > 1) {
-                    let pagination = '';
-                    if (data.current_page > 1) {
-                        pagination += `<li class="page-item"><a class="page-link" href="#" data-page="1">First</a></li>`;
-                        pagination += `<li class="page-item"><a class="page-link" href="#" data-page="${data.current_page - 1}">Previous</a></li>`;
-                    }
-
-                    let start = Math.max(1, data.current_page - 2);
-                    let end = Math.min(data.total_pages, data.current_page + 2);
-                    for (let i = start; i <= end; i++) {
-                        pagination += `<li class="page-item ${i == data.current_page ? 'active' : ''}">
-                            <a class="page-link" href="#" data-page="${i}">${i}</a>
-                        </li>`;
-                    }
-
-                    if (data.current_page < data.total_pages) {
-                        pagination += `<li class="page-item"><a class="page-link" href="#" data-page="${data.current_page + 1}">Next</a></li>`;
-                        pagination += `<li class="page-item"><a class="page-link" href="#" data-page="${data.total_pages}">Last</a></li>`;
-                    }
-
-                    paginationUl.innerHTML = pagination;
-                    paginationNav.classList.remove('d-none');
-                } else {
-                    paginationNav.classList.add('d-none');
-                }
-            })
-            .catch(err => {
-                itemsTbody.innerHTML = '<tr><td colspan="5">Load error</td></tr>';
-                console.error(err);
-            });
-    }
-
-    loadItems(1);
-
-    paginationUl.addEventListener('click', (e) => {
-        if (e.target.tagName === 'A' && e.target.dataset.page) {
-            e.preventDefault();
-            loadItems(e.target.dataset.page);
-        }
-    });
-</script>
-
-<style>
-    /* Placeholder rows match normal height (adjust if needed) */
-    .table-placeholder td {
-        height: 85px; /* Tweak this to match your row height */
-        padding: 0;
-    }
-</style>
+    </div>
+</div>
 
 <?php include 'includes/footer.php'; ?>

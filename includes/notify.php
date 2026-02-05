@@ -27,7 +27,7 @@ function notify_admins($subject, $body_html) {
         
         $mail->setFrom(getenv('SMTP_EMAIL'), 'Supply Dashboard');
         foreach ($admin_emails as $email) {
-            if ($admin['id'] == $current_user_id) continue;
+            
             $mail->addAddress($email);
         }
         

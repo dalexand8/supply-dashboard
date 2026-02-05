@@ -1,7 +1,6 @@
 <?php
 require 'includes/auth.php';
 
-
 $current_page = basename(__FILE__);
 
 // Include notify.php at top with error check
@@ -103,55 +102,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Item browser (unchanged from your version)
-$per_page = 50;
+// Item browser - starts empty, load on category select
+$per_page = 10;
 $current_page = max(1, (int)($_GET['page'] ?? 1));
 $offset = ($current_page - 1) * $per_page;
-$filter_cat = $_GET['cat'] ?? 'all';
+$filter_cat = $_GET['cat'] ?? '';  // Default empty (no load)
 
-try {
-    $count_query = "SELECT COUNT(*) FROM items";
-    $count_params = [];
-    if ($filter_cat === 'uncategorized') {
-        $count_query .= " WHERE category_id IS NULL";
-    } elseif ($filter_cat !== 'all' && is_numeric($filter_cat)) {
-        $count_query .= " WHERE category_id = ?";
-        $count_params[] = (int)$filter_cat;
-    }
-    $count_stmt = $pdo->prepare($count_query);
-    $count_stmt->execute($count_params);
-    $total_items = $count_stmt->fetchColumn();
-    $total_pages = ceil($total_items / $per_page);
+$items = [];
+$total_items = 0;
+$total_pages = 1;
 
-    $item_query = "SELECT i.id, i.name, COALESCE(c.name, 'Uncategorized') as category_name 
-                   FROM items i 
-                   LEFT JOIN categories c ON i.category_id = c.id";
-    $item_params = [];
-    if ($filter_cat === 'uncategorized') {
-        $item_query .= " WHERE i.category_id IS NULL";
-    } elseif ($filter_cat !== 'all' && is_numeric($filter_cat)) {
-        $item_query .= " WHERE i.category_id = ?";
-        $item_params[] = (int)$filter_cat;
+if ($filter_cat !== '') {
+    try {
+        $count_query = "SELECT COUNT(*) FROM items";
+        $count_params = [];
+        if ($filter_cat === 'uncategorized') {
+            $count_query .= " WHERE category_id IS NULL";
+        } elseif ($filter_cat !== 'all' && is_numeric($filter_cat)) {
+            $count_query .= " WHERE category_id = ?";
+            $count_params[] = (int)$filter_cat;
+        }
+        $count_stmt = $pdo->prepare($count_query);
+        $count_stmt->execute($count_params);
+        $total_items = $count_stmt->fetchColumn();
+        $total_pages = ceil($total_items / $per_page);
+
+        $item_query = "SELECT i.id, i.name, COALESCE(c.name, 'Uncategorized') as category_name 
+                       FROM items i 
+                       LEFT JOIN categories c ON i.category_id = c.id";
+        $item_params = [];
+        if ($filter_cat === 'uncategorized') {
+            $item_query .= " WHERE i.category_id IS NULL";
+        } elseif ($filter_cat !== 'all' && is_numeric($filter_cat)) {
+            $item_query .= " WHERE i.category_id = ?";
+            $item_params[] = (int)$filter_cat;
+        }
+        $item_query .= " ORDER BY i.name LIMIT ? OFFSET ?";
+        $item_stmt = $pdo->prepare($item_query);
+        $param_index = 1;
+        foreach ($item_params as $param) {
+            $item_stmt->bindValue($param_index++, $param);
+        }
+        $item_stmt->bindValue($param_index++, $per_page, PDO::PARAM_INT);
+        $item_stmt->bindValue($param_index, $offset, PDO::PARAM_INT);
+        $item_stmt->execute();
+        $items = $item_stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        $error = 'Database error: ' . $e->getMessage();
     }
-    $item_query .= " ORDER BY i.name";
-    $item_stmt = $pdo->prepare($item_query);
-    $item_stmt->execute($item_params);
-    $items = $item_stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    $error = 'Database error: ' . $e->getMessage();
-    $items = [];
-    $total_items = 0;
-    $total_pages = 1;
 }
 ?>
 <?php include 'includes/header.php'; ?>
-<?php include 'includes/navbar.php'; ?>
 
 <div class="container mt-5">
     <h2>Suggest New Item</h2>
     <p>Suggest a new item (with optional initial variant). Admins will review.</p>
+    
     <?php if ($success): ?>
-        <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <strong>Success!</strong> <?php echo htmlspecialchars($success); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
     <?php endif; ?>
     <?php if ($error && strpos($error, 'Database') === false): ?>
         <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
@@ -182,15 +193,16 @@ try {
     <hr class="my-5">
     
     <h3>Browse Existing Items</h3>
-    <p>Check if the item/variant exists. Suggest new variants directly in the table.</p>
+    <p>Select a category from the dropdown to view items and suggest variants.</p>
     
     <form method="GET" class="mb-3">
         <div class="row g-3">
             <div class="col-auto">
                 <label for="cat" class="visually-hidden">Category</label>
                 <select class="form-select" id="cat" name="cat" onchange="this.form.submit()">
-                    <option value="all" <?php echo $filter_cat === 'all' ? 'selected' : ''; ?>>All Categories</option>
-                    <option value="uncategorized" <?php echo $filter_cat === 'uncategorized' ? 'selected' : ''; ?>>Uncategorized</option>
+                    <option value="" selected>Select a category...</option>
+                    <option value="all">All Categories</option>
+                    <option value="uncategorized">Uncategorized</option>
                     <?php foreach ($category_options as $opt): ?>
                         <option value="<?php echo $opt['id']; ?>" <?php echo $filter_cat == $opt['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($opt['name']); ?></option>
                     <?php endforeach; ?>
@@ -201,6 +213,8 @@ try {
     
     <?php if ($error && strpos($error, 'Database') !== false): ?>
         <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
+    <?php elseif ($filter_cat === ''): ?>
+        <p class="text-muted text-center">Select a category above to browse existing items.</p>
     <?php elseif (!empty($items)): ?>
         <div class="table-responsive">
             <table class="table table-striped table-hover">
@@ -240,6 +254,14 @@ try {
                             </td>
                         </tr>
                     <?php endforeach; ?>
+                    <?php
+                    // Pad to 10 rows for consistent height
+                    $current_count = count($items);
+                    for ($i = $current_count; $i < 10; $i++): ?>
+                        <tr class="table-placeholder">
+                            <td colspan="4">&nbsp;</td>
+                        </tr>
+                    <?php endfor; ?>
                 </tbody>
             </table>
         </div>
@@ -272,10 +294,29 @@ try {
             </nav>
         <?php endif; ?>
     <?php else: ?>
-        <p>No items found.</p>
+        <p class="text-muted text-center">No items in this category.</p>
     <?php endif; ?>
     
     <a href="dashboard.php" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
+
+<script>
+    // Auto-fade success alert after 5 seconds
+    const successAlert = document.querySelector('.alert-success');
+    if (successAlert) {
+        setTimeout(function() {
+            const bsAlert = bootstrap.Alert.getOrCreateInstance(successAlert);
+            bsAlert.close();
+        }, 5000);
+    }
+</script>
+
+<style>
+    /* Placeholder rows for consistent table height */
+    .table-placeholder td {
+        height: 60px; /* Adjust to match your row height */
+        padding: 0;
+    }
+</style>
 
 <?php include 'includes/footer.php'; ?>

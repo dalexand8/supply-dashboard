@@ -188,7 +188,36 @@
 .accordion-button::after {
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23adb5bd'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e") !important; /* Gray arrow */
 }
+/* Fixed height for placeholder rows (no jump) */
+/* Fixed height table - no jump on last page */
+.table-responsive tbody {
+    display: block;
+    min-height: 600px; /* ~10 rows at 60px each - adjust if rows taller */
+}
 
+.table-responsive thead, .table-responsive tbody tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+
+.table-placeholder td {
+    height: 50px; /* Adjust to match your row height (test 55-70px) */
+    padding: 0;
+}
+
+/* Clean active accordion header - no ugly purple */
+.accordion-button:not(.collapsed) {
+    background-color: #343a40 !important; /* Nice dark gray (change to #212529 for black) */
+    color: #fff !important;
+    box-shadow: none !important;
+}
+
+.accordion-button:focus {
+    box-shadow: none !important;
+    border-color: #495057 !important;
+}
 </style>
 </head>
 <body class="d-flex flex-column min-vh-100">
