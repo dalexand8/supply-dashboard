@@ -1,10 +1,14 @@
 <?php
 // dashboard.php
-require 'includes/auth.php';  // Auth + session/db + dotenv
+require 'includes/auth.php';  // Auth + session/db
+
+require_once 'vendor/autoload.php';  // Dotenv
+
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv->load();
 
 $current_page = basename(__FILE__);
 
-// Locations + colors from .env
 $locations = array_filter(array_map('trim', explode(',', $_ENV['OFFICE_LOCATIONS'] ?? '')));
 
 $color_json = $_ENV['OFFICE_COLORS'] ?? '{}';
@@ -14,7 +18,6 @@ if (!is_array($location_colors)) {
     $location_colors = [];
 }
 
-// Load requests
 try {
     $requests_by_location = [];
     foreach ($locations as $loc) {
@@ -40,7 +43,7 @@ $status_counts = [];
 foreach ($requests_by_location as $loc_requests) {
     foreach ($loc_requests ?? [] as $req) {
         $total_requests++;
-        $status = $req['status'] ?? 'Unknown';
+        $status = $req['status'] ?? 'Pending';
         $status_counts[$status] = ($status_counts[$status] ?? 0) + 1;
     }
 }
@@ -48,7 +51,7 @@ foreach ($requests_by_location as $loc_requests) {
 include 'includes/header.php';
 ?>
 
-<div class="container py-4"> <!-- Narrower centered -->
+<div class="container py-4">
     <div class="text-center mb-4">
         <h1 class="h2 mb-3">Supply Requests Dashboard</h1>
         <div class="fs-5 mb-3">
@@ -123,8 +126,8 @@ include 'includes/header.php';
                                         by <?php echo htmlspecialchars($req['username']); ?>
                                     </div>
                                     <div>
-                                        Status: <span class="badge bg-<?php echo getStatusClass($req['status']); ?>">
-                                            <?php echo $req['status']; ?>
+                                        Status: <span class="badge bg-<?php echo getStatusClass($req['status'] ?: 'Pending'); ?>">
+                                            <?php echo $req['status'] ?: 'Pending'; ?>
                                         </span>
                                     </div>
                                 </li>
@@ -139,6 +142,8 @@ include 'includes/header.php';
         <?php endforeach; ?>
     </div>
 </div>
+
+<?php include 'includes/footer.php'; ?>
 
 <script>
     document.querySelectorAll('.delete-request-btn').forEach(btn => {
@@ -156,30 +161,34 @@ include 'includes/header.php';
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Silent success: remove row + update stats
+                    // Remove the row
                     this.closest('li').remove();
 
-                    // Update total
+                    // Update total count
                     const totalBadge = document.querySelector('.badge.bg-secondary');
                     if (totalBadge) {
-                        let total = parseInt(totalBadge.textContent);
-                        totalBadge.textContent = --total + ' Total';
+                        let total = parseInt(totalBadge.textContent.trim()) || 0;
+                        if (total > 0) {
+                            totalBadge.textContent = (total - 1) + ' Total';
+                        }
                     }
 
-                    // Update status badge
-                    const status = data.status || 'Pending';
-                    const statusBadges = document.querySelectorAll('.badge');
+                    // Update ONLY the top summary status badges
+                    const deletedStatus = data.status || 'Pending';
+                    const statusBadges = document.querySelectorAll('.d-flex.justify-content-center .badge');
                     statusBadges.forEach(badge => {
-                        if (badge.textContent.includes(status)) {
-                            let count = parseInt(badge.textContent.split(' ')[0]);
-                            if (count > 1) {
-                                badge.textContent = --count + ' ' + status;
-                            } else {
-                                badge.remove();
+                        if (badge.textContent.trim().includes(deletedStatus)) {
+                            let parts = badge.textContent.trim().split(/\s+/);
+                            let count = parseInt(parts[0]);
+                            if (!isNaN(count) && count > 0) {
+                                if (count > 1) {
+                                    badge.textContent = (count - 1) + ' ' + deletedStatus;
+                                } else {
+                                    badge.remove();
+                                }
                             }
                         }
                     });
-                    // No success alert
                 } else {
                     alert('Error: ' + (data.error || 'Unknown'));
                 }
@@ -192,12 +201,12 @@ include 'includes/header.php';
     });
 </script>
 
-<?php include 'includes/footer.php'; ?>
 
 <?php
 function getStatusClass($status) {
+    $status = $status ?: 'Pending';
     switch ($status) {
-        case 'Pending': return 'secondary';
+        case 'Pending': return 'warning';
         case 'Acknowledged': return 'info';
         case 'Ordered': return 'primary';
         case 'Fulfilled': return 'success';

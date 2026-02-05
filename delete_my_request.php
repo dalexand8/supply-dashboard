@@ -4,14 +4,14 @@ require 'db.php';
 
 if (!isset($_SESSION['user_id'])) {
     header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;
 }
 
 $id = (int)($_GET['id'] ?? 0);
 if (!$id) {
     header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'error' => 'Invalid ID']);
+    echo json_encode(['success' => false, 'message' => 'Invalid ID']);
     exit;
 }
 
@@ -23,7 +23,7 @@ try {
 
     if (!$old_status) {
         header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'error' => 'Not your Pending request']);
+        echo json_encode(['success' => false, 'message' => 'Not your Pending request']);
         exit;
     }
 
@@ -36,7 +36,7 @@ try {
     exit;
 } catch (PDOException $e) {
     header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'error' => 'Delete failed']);
+    echo json_encode(['success' => false, 'message' => 'Delete failed']);
     exit;
 }
 ?>

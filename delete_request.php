@@ -4,19 +4,19 @@ require 'db.php';
 
 if (!isset($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
     header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;
 }
 
 $id = (int)($_GET['id'] ?? 0);
 if (!$id) {
     header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'error' => 'Invalid ID']);
+    echo json_encode(['success' => false, 'message' => 'Invalid ID']);
     exit;
 }
 
 try {
-    // Get old status before delete
+    // Get old status
     $stmt = $pdo->prepare("SELECT status FROM requests WHERE id = ?");
     $stmt->execute([$id]);
     $old_status = $stmt->fetchColumn() ?: 'Pending';
@@ -30,7 +30,7 @@ try {
     exit;
 } catch (PDOException $e) {
     header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'error' => 'Delete failed']);
+    echo json_encode(['success' => false, 'message' => 'Delete failed']);
     exit;
 }
 ?>

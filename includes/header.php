@@ -218,6 +218,32 @@
     box-shadow: none !important;
     border-color: #495057 !important;
 }
+/* Fix dark mode select / option visibility */
+body.bg-dark .form-select,
+body[data-bs-theme="dark"] .form-select {
+    background-color: #2c3034;
+    color: #e9ecef;
+    border-color: #495057;
+}
+
+body.bg-dark .form-select option,
+body[data-bs-theme="dark"] .form-select option {
+    background-color: #2c3034;
+    color: #e9ecef;
+}
+
+body.bg-dark .form-select:focus,
+body[data-bs-theme="dark"] .form-select:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25);
+}
+
+/* Optional: make placeholder more visible */
+body.bg-dark .form-select:required:invalid,
+body[data-bs-theme="dark"] .form-select:required:invalid {
+    color: #adb5bd;
+}
+
 </style>
 </head>
 <body class="d-flex flex-column min-vh-100">

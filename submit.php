@@ -82,6 +82,88 @@ include 'includes/header.php';
 
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
+<style>
+    /* Force dark theme on the whole page */
+    html {
+        color-scheme: dark;
+    }
+
+    /* Native select dark mode fix */
+    .form-select {
+        background-color: #2d343a;
+        color: #e9ecef;
+        border-color: #495057;
+    }
+
+    .form-select option {
+        background-color: #2d343a;
+        color: #e9ecef;
+    }
+
+    .form-select option:checked,
+    .form-select option:hover {
+        background-color: #0d6efd !important;
+        color: white !important;
+    }
+
+    .form-select:focus {
+        border-color: #80bdff;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+
+    .form-select:required:invalid {
+        color: #adb5bd;
+    }
+
+    /* Select2 dark theme improvements */
+    .select2-container--default .select2-selection--single {
+        background-color: #2d343a;
+        border: 1px solid #495057;
+        color: #e9ecef;
+        height: calc(2.25rem + 2px);
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        color: #e9ecef;
+        line-height: 2.25rem;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 100%;
+    }
+
+    .select2-dropdown {
+        background-color: #2d343a !important;
+        border: 1px solid #495057 !important;
+        color: #e9ecef !important;
+    }
+
+    .select2-results__option {
+        background-color: #2d343a !important;
+        color: #e9ecef !important;
+    }
+
+    .select2-results__option--highlighted[aria-selected] {
+        background-color: #0d6efd !important;
+        color: white !important;
+    }
+
+    .select2-results__option[aria-selected=true] {
+        background-color: #343a40 !important;
+    }
+
+    .select2-container--default .select2-search--dropdown .select2-search__field {
+        background-color: #343a40;
+        border: 1px solid #495057;
+        color: #e9ecef;
+    }
+
+    .select2-container--default .select2-results__group {
+        color: #adb5bd;
+        background-color: #343a40;
+    }
+</style>
+
 <div class="container py-4">
     <h2 class="mb-4">Submit Supply Request</h2>
     
@@ -89,17 +171,22 @@ include 'includes/header.php';
     
     <form id="submit-form" method="POST">
         <div class="mb-3">
-            <label for="location" class="form-label">Location</label>
+            <label for="location" class="form-label">Location <span class="text-danger">*</span></label>
             <select class="form-select" id="location" name="location" required>
+                <option value="" disabled selected>Choose location...</option>
                 <?php foreach ($locations as $loc): ?>
-                    <option value="<?php echo htmlspecialchars($loc); ?>"><?php echo htmlspecialchars($loc); ?></option>
+                    <option value="<?php echo htmlspecialchars($loc); ?>">
+                        <?php echo htmlspecialchars($loc); ?>
+                    </option>
                 <?php endforeach; ?>
             </select>
         </div>
+
         <div class="mb-3">
-            <label for="item" class="form-label">Item</label>
+            <label for="item" class="form-label">Item <span class="text-danger">*</span></label>
             <select class="form-select" id="item" name="item" required></select>
         </div>
+
         <div class="mb-3" id="variant_container" style="display:none;">
             <label for="variant_id" class="form-label">Variant</label>
             <select class="form-select" id="variant_id" name="variant_id">
@@ -107,14 +194,17 @@ include 'includes/header.php';
             </select>
             <small class="text-muted" id="no_variants_msg" style="display:none;">No variants available for this item.</small>
         </div>
+
         <div class="mb-3" id="other_field" style="display:none;">
             <label for="other" class="form-label">Other Item (max 25 chars)</label>
             <input type="text" class="form-control" id="other" name="other" maxlength="25">
         </div>
+
         <div class="mb-3">
-            <label for="quantity" class="form-label">Quantity</label>
+            <label for="quantity" class="form-label">Quantity <span class="text-danger">*</span></label>
             <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="1" required>
         </div>
+
         <button type="submit" class="btn btn-primary">Submit Request</button>
         <a href="dashboard.php" class="btn btn-secondary ms-3">Back to Dashboard</a>
     </form>
@@ -124,6 +214,7 @@ include 'includes/header.php';
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
     $(document).ready(function() {
+        // Initialize Select2 with dark-friendly settings
         $('#item').select2({
             width: '100%',
             dropdownAutoWidth: true,
@@ -144,46 +235,21 @@ include 'includes/header.php';
             minimumInputLength: 0
         });
 
+        // Add "Other" option
         $('#item').append(new Option('Other', 'other', false, false));
         $('#item').val(null).trigger('change');
 
-        // Placeholder in search
+        // Custom placeholder when dropdown opens
         $('#item').on('select2:open', function () {
             $('.select2-search__field').attr('placeholder', 'Search items or categories...');
         });
 
-        // Dark dropdown no flash
-        $('#item').on('select2:open', function () {
-            setTimeout(function() {
-                $('.select2-dropdown').css({
-                    'background-color': '#212529',
-                    'border': '1px solid #495057',
-                    'color': '#fff',
-                    'opacity': '1'
-                });
-                $('.select2-results__options').css('background-color', '#212529');
-                $('.select2-results__option').css({
-                    'background-color': '#212529',
-                    'color': '#fff'
-                });
-                $('.select2-results__group').css({
-                    'background-color': '#343a40',
-                    'color': '#adb5bd'
-                });
-                $('.select2-search__field').css({
-                    'background-color': '#343a40',
-                    'color': '#fff',
-                    'border': '1px solid #495057'
-                });
-            }, 150);
-        });
-
-        // Variant load
+        // Variant loading logic
         $('#item').on('change', function() {
             var item = $(this).val();
             var $variantContainer = $('#variant_container');
-            var $variantSelect = $('#variant_id');
-            var $noMsg = $('#no_variants_msg');
+            var $variantSelect    = $('#variant_id');
+            var $noMsg            = $('#no_variants_msg');
             
             $variantContainer.hide();
             $variantSelect.empty().prop('disabled', true);
@@ -196,7 +262,8 @@ include 'includes/header.php';
                 $.get('api_variants.php', { item: item }, function(variants) {
                     $variantSelect.empty();
                     $variantSelect.append('<option value="">Select Variant</option>');
-                    if (variants.length > 0) {
+                    
+                    if (variants && variants.length > 0) {
                         variants.forEach(function(v) {
                             $variantSelect.append('<option value="' + v.id + '">' + v.name + '</option>');
                         });
@@ -205,8 +272,12 @@ include 'includes/header.php';
                         $variantSelect.append('<option value="" selected>N/A</option>').prop('disabled', true);
                         $noMsg.show();
                     }
+                    
                     $variantContainer.show();
-                }, 'json');
+                }, 'json').fail(function() {
+                    $variantSelect.append('<option value="" selected>Error loading variants</option>');
+                    $variantContainer.show();
+                });
             }
         });
 
@@ -219,33 +290,32 @@ include 'includes/header.php';
                 type: 'POST',
                 data: $(this).serialize(),
                 dataType: 'json',
-               success: function(response) {
-    if (response.success) {
-        $('#alert-container').html(`
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <strong>Success!</strong> Request Submitted.
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        `);
-        // Auto-fade after 5 seconds
-        setTimeout(function() {
-            $('.alert').alert('close');
-        }, 5000);
+                success: function(response) {
+                    if (response.success) {
+                        $('#alert-container').html(`
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                <strong>Success!</strong> Request Submitted.
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        `);
+                        setTimeout(function() {
+                            $('.alert').alert('close');
+                        }, 5000);
 
-        // Clear form
-        $('#submit-form')[0].reset();
-        $('#item').val(null).trigger('change');
-        $('#variant_container').hide();
-        $('#other_field').hide();
-    } else {
-        $('#alert-container').html(`
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <strong>Error!</strong> ${response.message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        `);
-    }
-},
+                        // Reset form
+                        $('#submit-form')[0].reset();
+                        $('#item').val(null).trigger('change');
+                        $('#variant_container').hide();
+                        $('#other_field').hide();
+                    } else {
+                        $('#alert-container').html(`
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <strong>Error!</strong> ${response.message || 'Unknown error'}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        `);
+                    }
+                },
                 error: function() {
                     $('#alert-container').html(`
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
