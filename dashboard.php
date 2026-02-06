@@ -99,41 +99,52 @@ include 'includes/header.php';
                     <div class="accordion-body p-0">
                         <ul class="list-group list-group-flush">
                            <?php foreach ($requests_by_location[$loc] ?? [] as $req): ?>
-    <!-- Inside your loop for each request -->
-    <li class="list-group-item request-item" 
-        data-request-id="<?= $req['id'] ?>" 
-        data-current-status="<?= htmlspecialchars($req['status'] ?? 'Pending') ?>">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <strong><?= htmlspecialchars($req['item_name']) ?></strong>
-                <?php if (!empty($req['variant_name'])): ?>
-                    <small class="text-muted">(<?= htmlspecialchars($req['variant_name']) ?>)</small>
-                <?php endif; ?>
-                <span class="badge status-badge ms-2 <?= getStatusClass($req['status'] ?? 'Pending') ?>">
-                    <?= htmlspecialchars($req['status'] ?? 'Pending') ?>
-                </span>
-                <div class="small text-muted mt-1">
-                    Requested by <?= htmlspecialchars($req['username']) ?> 
-                    • Qty: <?= $req['quantity'] ?>
-                    • <?= date('M d, Y g:ia', strtotime($req['created_at'])) ?>
-                </div>
-            </div>
-
-            <?php if (!empty($_SESSION['is_admin'])): ?>
-            <div class="status-change">
-                <select class="form-select form-select-sm status-select" 
-                        data-request-id="<?= $req['id'] ?>">
-                    <option value="Pending"    <?= ($req['status'] ?? '') === 'Pending'    ? 'selected' : '' ?>>Pending</option>
-                    <option value="Approved"   <?= ($req['status'] ?? '') === 'Approved'   ? 'selected' : '' ?>>Approved</option>
-                    <option value="Denied"     <?= ($req['status'] ?? '') === 'Denied'     ? 'selected' : '' ?>>Denied</option>
-                    <option value="Fulfilled"  <?= ($req['status'] ?? '') === 'Fulfilled'  ? 'selected' : '' ?>>Fulfilled</option>
-                    <option value="Ordered"    <?= ($req['status'] ?? '') === 'Ordered'    ? 'selected' : '' ?>>Ordered</option>
-                    <!-- Add more statuses if needed, e.g. Backordered, Acknowledged -->
-                </select>
-            </div>
+   <li class="list-group-item request-item" 
+    data-request-id="<?= $req['id'] ?>" 
+    data-current-status="<?= htmlspecialchars($req['status'] ?? 'Pending') ?>">
+    
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div class="flex-grow-1">
+            <strong><?= htmlspecialchars($req['item_name']) ?></strong>
+            <?php if (!empty($req['variant_name'])): ?>
+                <small class="text-muted">(<?= htmlspecialchars($req['variant_name']) ?>)</small>
             <?php endif; ?>
+            <span class="badge status-badge ms-2 <?= getStatusClass($req['status'] ?? 'Pending') ?>">
+                <?= htmlspecialchars($req['status'] ?? 'Pending') ?>
+            </span>
+            <div class="small text-muted mt-1">
+                Requested by <?= htmlspecialchars($req['username']) ?> 
+                • Qty: <?= $req['quantity'] ?>
+                • <?= date('M d, Y g:ia', strtotime($req['created_at'])) ?>
+            </div>
         </div>
-    </li>
+
+        <?php if (!empty($_SESSION['is_admin'])): ?>
+        <div class="d-flex align-items-center gap-2">
+            <!-- Status selector -->
+            <select class="form-select form-select-sm status-select" 
+                    data-request-id="<?= $req['id'] ?>">
+                <option value="Pending"    <?= ($req['status'] ?? '') === 'Pending'    ? 'selected' : '' ?>>Pending</option>
+                <option value="Approved"   <?= ($req['status'] ?? '') === 'Approved'   ? 'selected' : '' ?>>Approved</option>
+                <option value="Acknowledged" <?= ($req['status'] ?? '') === 'Acknowledged'     ? 'selected' : '' ?>>Acknowledged</option>
+                <option value="Denied"     <?= ($req['status'] ?? '') === 'Denied'     ? 'selected' : '' ?>>Denied</option>
+                <option value="Fulfilled"  <?= ($req['status'] ?? '') === 'Fulfilled'  ? 'selected' : '' ?>>Fulfilled</option>
+                <option value="Ordered"    <?= ($req['status'] ?? '') === 'Ordered'    ? 'selected' : '' ?>>Ordered</option>
+                
+                <!-- Add more if needed: Backordered, Acknowledged, etc. -->
+            </select>
+
+            <!-- Delete button -->
+            <button class="btn btn-sm btn-outline-danger delete-request-btn"
+                    data-request-id="<?= $req['id'] ?>"
+                    title="Delete this request">
+                <i class="bi bi-trash"></i> <!-- Bootstrap Icons – make sure they're loaded -->
+                <!-- or just text: Delete -->
+            </button>
+        </div>
+        <?php endif; ?>
+    </div>
+</li>
 <?php endforeach; ?>
 
 <?php if (empty($requests_by_location[$loc])): ?>
@@ -271,6 +282,59 @@ document.addEventListener('DOMContentLoaded', function() {
             .finally(() => {
                 this.disabled = false;
             });
+        });
+    });
+});
+// Delete request handler
+document.querySelectorAll('.delete-request-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const requestId = this.dataset.requestId;
+        const row = this.closest('.request-item');
+
+        if (!confirm('Are you sure you want to delete this request?\nThis action cannot be undone.')) {
+            return;
+        }
+
+        // Visual feedback
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        fetch('delete_request.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `request_id=${encodeURIComponent(requestId)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove row from DOM
+                row.remove();
+
+                // Update top counters
+                if (data.counts && Object.keys(data.counts).length > 0) {
+                    updateTopCounters(data.counts, data.total);
+                }
+
+                // Optional small success message
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-success alert-dismissible fade show mt-3';
+                alertDiv.innerHTML = `
+                    Request deleted successfully
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.querySelector('.container').prepend(alertDiv);
+                setTimeout(() => alertDiv.remove(), 5000);
+            } else {
+                alert('Delete failed: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Error while deleting');
+        })
+        .finally(() => {
+            this.disabled = false;
+            this.innerHTML = '<i class="bi bi-trash"></i>';
         });
     });
 });
