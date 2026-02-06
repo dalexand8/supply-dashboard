@@ -98,43 +98,47 @@ include 'includes/header.php';
                 <div id="collapse<?php echo htmlspecialchars(str_replace(' ', '', $loc)); ?>" class="accordion-collapse collapse">
                     <div class="accordion-body p-0">
                         <ul class="list-group list-group-flush">
-                            <?php foreach ($requests_by_location[$loc] ?? [] as $req): ?>
-                                <li class="list-group-item">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <div class="fw-bold">
-                                            <?php echo htmlspecialchars($req['item_name']); ?>
-                                            <?php if (!empty($req['variant_name'])): ?>
-                                                (<?php echo htmlspecialchars($req['variant_name']); ?>)
-                                            <?php endif; ?>
-                                            <span class="text-muted fw-normal ms-2">Qty: <?php echo $req['quantity']; ?></span>
-                                        </div>
-                                        <div class="d-flex gap-2">
-                                            <?php if ($_SESSION['is_admin'] || ($_SESSION['user_id'] == $req['user_id'] && $req['status'] == 'Pending')): ?>
-                                                <a href="edit.php?id=<?php echo $req['id']; ?>" class="btn btn-sm btn-warning">Edit</a>
-                                            <?php endif; ?>
-                                            <?php if ($_SESSION['is_admin'] || ($_SESSION['user_id'] == $req['user_id'] && $req['status'] == 'Pending')): ?>
-                                                <button type="button" class="btn btn-sm bg-secondary delete-request-btn" data-id="<?php echo $req['id']; ?>" data-admin="<?php echo $_SESSION['is_admin'] ? '1' : '0'; ?>">
-                                                    Delete
-                                                </button>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                    <div class="text-muted small mb-1">
-                                        <?php if ($req['created_at']): ?>
-                                            Submitted: <?php echo date('n/j/Y', strtotime($req['created_at'])); ?>
-                                        <?php endif; ?>
-                                        by <?php echo htmlspecialchars($req['username']); ?>
-                                    </div>
-                                    <div>
-                                        Status: <span class="badge bg-<?php echo getStatusClass($req['status'] ?: 'Pending'); ?>">
-                                            <?php echo $req['status'] ?: 'Pending'; ?>
-                                        </span>
-                                    </div>
-                                </li>
-                            <?php endforeach; ?>
-                            <?php if (empty($requests_by_location[$loc])): ?>
-                                <li class="list-group-item">No requests yet</li>
-                            <?php endif; ?>
+                           <?php foreach ($requests_by_location[$loc] ?? [] as $req): ?>
+    <!-- Inside your loop for each request -->
+    <li class="list-group-item request-item" 
+        data-request-id="<?= $req['id'] ?>" 
+        data-current-status="<?= htmlspecialchars($req['status'] ?? 'Pending') ?>">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong><?= htmlspecialchars($req['item_name']) ?></strong>
+                <?php if (!empty($req['variant_name'])): ?>
+                    <small class="text-muted">(<?= htmlspecialchars($req['variant_name']) ?>)</small>
+                <?php endif; ?>
+                <span class="badge status-badge ms-2 <?= getStatusClass($req['status'] ?? 'Pending') ?>">
+                    <?= htmlspecialchars($req['status'] ?? 'Pending') ?>
+                </span>
+                <div class="small text-muted mt-1">
+                    Requested by <?= htmlspecialchars($req['username']) ?> 
+                    • Qty: <?= $req['quantity'] ?>
+                    • <?= date('M d, Y g:ia', strtotime($req['created_at'])) ?>
+                </div>
+            </div>
+
+            <?php if (!empty($_SESSION['is_admin'])): ?>
+            <div class="status-change">
+                <select class="form-select form-select-sm status-select" 
+                        data-request-id="<?= $req['id'] ?>">
+                    <option value="Pending"    <?= ($req['status'] ?? '') === 'Pending'    ? 'selected' : '' ?>>Pending</option>
+                    <option value="Approved"   <?= ($req['status'] ?? '') === 'Approved'   ? 'selected' : '' ?>>Approved</option>
+                    <option value="Denied"     <?= ($req['status'] ?? '') === 'Denied'     ? 'selected' : '' ?>>Denied</option>
+                    <option value="Fulfilled"  <?= ($req['status'] ?? '') === 'Fulfilled'  ? 'selected' : '' ?>>Fulfilled</option>
+                    <option value="Ordered"    <?= ($req['status'] ?? '') === 'Ordered'    ? 'selected' : '' ?>>Ordered</option>
+                    <!-- Add more statuses if needed, e.g. Backordered, Acknowledged -->
+                </select>
+            </div>
+            <?php endif; ?>
+        </div>
+    </li>
+<?php endforeach; ?>
+
+<?php if (empty($requests_by_location[$loc])): ?>
+    <li class="list-group-item text-muted">No requests yet</li>
+<?php endif; ?>
                         </ul>
                     </div>
                 </div>
@@ -146,73 +150,147 @@ include 'includes/header.php';
 <?php include 'includes/footer.php'; ?>
 
 <script>
-    document.querySelectorAll('.delete-request-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            if (!confirm('Are you sure you want to delete this request?')) return;
+// Status class helper (make sure this matches your PHP function)
+function getStatusClass(status) {
+    const map = {
+        'Pending':      'bg-warning text-dark',
+        'Approved':     'bg-info text-white',
+        'Acknowledged': 'bg-info text-white',
+        'Ordered':      'bg-primary text-white',
+        'Fulfilled':    'bg-success text-white',
+        'Backordered':  'bg-danger text-white',
+        'Denied':       'bg-danger text-white',
+        'Unavailable':  'bg-dark text-white'
+    };
+    return map[status.trim()] || 'bg-secondary text-white';
+}
 
-            const requestId = this.dataset.id;
-            const isAdmin = this.dataset.admin === '1';
-            const url = isAdmin ? 'delete_request.php' : 'delete_my_request.php';
+// Update all status badges that have a specific status
+function updateAllBadges(oldStatus, newStatus) {
+    document.querySelectorAll('.status-badge').forEach(badge => {
+        if (badge.textContent.trim() === oldStatus) {
+            badge.textContent = newStatus;
+            badge.className = `badge status-badge ms-2 ${getStatusClass(newStatus)}`;
+        }
+    });
+}
 
-            fetch(url + '?id=' + requestId, {
-                method: 'GET',
-                credentials: 'include'
+// Rebuild top summary badges + total
+function updateTopCounters(newCounts, newTotal) {
+    const container = document.querySelector('.d-flex.justify-content-center.flex-wrap.gap-3');
+    if (!container) return;
+
+    // Update total
+    if (newTotal !== undefined) {
+        const totalBadge = container.querySelector('.bg-secondary');
+        if (totalBadge) {
+            totalBadge.textContent = `${newTotal} Total`;
+        }
+    }
+
+    // Remove old status badges (keep total)
+    container.querySelectorAll('.badge:not(.bg-secondary)').forEach(b => b.remove());
+
+    // Priority order - same as PHP
+    const priority = ['Pending', 'Ordered', 'Backordered', 'Approved', 'Acknowledged', 'Fulfilled'];
+
+    priority.forEach(status => {
+        const count = newCounts[status] || 0;
+        if (count > 0) {
+            const badge = document.createElement('span');
+            badge.className = `badge ${getStatusClass(status)} fs-5`;
+            badge.textContent = `${count} ${status}`;
+            container.appendChild(badge);
+        }
+    });
+
+    // Other statuses
+    Object.keys(newCounts).forEach(status => {
+        if (!priority.includes(status) && newCounts[status] > 0) {
+            const badge = document.createElement('span');
+            badge.className = `badge ${getStatusClass(status)} fs-5`;
+            badge.textContent = `${newCounts[status]} ${status}`;
+            container.appendChild(badge);
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.status-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const requestId   = this.dataset.requestId;
+            const newStatus   = this.value;
+            const row         = this.closest('.request-item');
+            const badge       = row?.querySelector('.status-badge');
+
+            if (!row || !badge) return;
+
+            // Remember old status before change
+            const oldStatus = row.dataset.currentStatus || badge.textContent.trim();
+
+            this.disabled = true;
+
+            fetch('update_status.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `request_id=${encodeURIComponent(requestId)}&status=${encodeURIComponent(newStatus)}`
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Remove the row
-                    this.closest('li').remove();
+                    // Update the changed row's badge
+                    badge.textContent = newStatus;
+                    badge.className = `badge status-badge ms-2 ${getStatusClass(newStatus)}`;
 
-                    // Update total count
-                    const totalBadge = document.querySelector('.badge.bg-secondary');
-                    if (totalBadge) {
-                        let total = parseInt(totalBadge.textContent.trim()) || 0;
-                        if (total > 0) {
-                            totalBadge.textContent = (total - 1) + ' Total';
-                        }
+                    // Update ALL other badges that had the old status
+                    updateAllBadges(oldStatus, newStatus);
+
+                    // Update top counters
+                    if (data.counts && Object.keys(data.counts).length > 0) {
+                        updateTopCounters(data.counts, data.total);
                     }
 
-                    // Update ONLY the top summary status badges
-                    const deletedStatus = data.status || 'Pending';
-                    const statusBadges = document.querySelectorAll('.d-flex.justify-content-center .badge');
-                    statusBadges.forEach(badge => {
-                        if (badge.textContent.trim().includes(deletedStatus)) {
-                            let parts = badge.textContent.trim().split(/\s+/);
-                            let count = parseInt(parts[0]);
-                            if (!isNaN(count) && count > 0) {
-                                if (count > 1) {
-                                    badge.textContent = (count - 1) + ' ' + deletedStatus;
-                                } else {
-                                    badge.remove();
-                                }
-                            }
-                        }
-                    });
+                    // Brief success flash
+                    row.style.backgroundColor = 'rgba(40, 167, 69, 0.12)';
+                    setTimeout(() => {
+                        row.style.backgroundColor = '';
+                    }, 1200);
+
+                    // Update data attribute for next time
+                    row.dataset.currentStatus = newStatus;
                 } else {
-                    alert('Error: ' + (data.error || 'Unknown'));
+                    alert('Update failed: ' + (data.error || 'Unknown error'));
+                    this.value = oldStatus; // revert
                 }
             })
             .catch(err => {
                 console.error(err);
-                alert('Delete failed');
+                alert('Communication error');
+                this.value = oldStatus;
+            })
+            .finally(() => {
+                this.disabled = false;
             });
         });
     });
+});
 </script>
 
 
 <?php
 function getStatusClass($status) {
-    $status = $status ?: 'Pending';
-    switch ($status) {
-        case 'Pending': return 'warning';
-        case 'Acknowledged': return 'info';
-        case 'Ordered': return 'primary';
-        case 'Fulfilled': return 'success';
-        case 'Backordered': return 'danger';
-        case 'Unavailable': return 'dark';
-        default: return 'secondary';
-    }
+    $status = trim($status ?: 'Pending');
+    
+    return match($status) {
+        'Pending'      => 'bg-warning text-dark',
+        'Approved'     => 'bg-info text-white',
+        'Acknowledged' => 'bg-info text-white',
+        'Ordered'      => 'bg-primary text-white',
+        'Fulfilled'    => 'bg-success text-white',
+        'Backordered'  => 'bg-danger text-white',
+        'Denied'       => 'bg-danger text-white',
+        'Unavailable'  => 'bg-dark text-white',
+        default        => 'bg-secondary text-white',
+    };
 }
 ?>
