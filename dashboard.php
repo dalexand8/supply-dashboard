@@ -99,7 +99,7 @@ include 'includes/header.php';
                     <div class="accordion-body p-0">
                         <ul class="list-group list-group-flush">
                            <?php foreach ($requests_by_location[$loc] ?? [] as $req): ?>
-   <li class="list-group-item request-item" 
+  <li class="list-group-item request-item py-2 py-sm-3"
     data-request-id="<?= $req['id'] ?>" 
     data-current-status="<?= htmlspecialchars($req['status'] ?? 'Pending') ?>">
     
@@ -148,7 +148,7 @@ include 'includes/header.php';
 <?php endforeach; ?>
 
 <?php if (empty($requests_by_location[$loc])): ?>
-    <li class="list-group-item text-muted">No requests yet</li>
+    <li class="list-group-item request-item py-2 py-sm-3">No requests yet</li>
 <?php endif; ?>
                         </ul>
                     </div>
