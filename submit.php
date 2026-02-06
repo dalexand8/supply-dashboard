@@ -25,24 +25,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $item = $_POST['item'] ?? '';
     $variant_id = !empty($_POST['variant_id']) ? (int)$_POST['variant_id'] : null;
     $quantity = (int)($_POST['quantity'] ?? 1);
-    $other = isset($_POST['other']) ? substr($_POST['other'], 0, 25) : '';
-   
+
     try {
-        if ($item === 'other' && $other) {
-            $item_name = $other;
-            $suggested = 1;
-            $stmt = $pdo->prepare("INSERT INTO suggestions (name, category_id, user_id) VALUES (?, NULL, ?)");
-            $stmt->execute([$item_name, $_SESSION['user_id']]);
-        } else {
-            $item_name = $item;
-            $suggested = 0;
-        }
-       
+        $item_name = $item;
+        $suggested = 0;
+
         $stmt = $pdo->prepare("INSERT INTO requests (location, item_name, variant_id, suggested, user_id, quantity, status) VALUES (?, ?, ?, ?, ?, ?, 'Pending')");
         $stmt->execute([$location, $item_name, $variant_id, $suggested, $_SESSION['user_id'], $quantity]);
-       
+
         $success = 'Request submitted successfully!';
-        
+
         // Notification
         $subject = 'New Supply Request';
         $body = "<p>User <strong>" . htmlspecialchars($_SESSION['username']) . "</strong> submitted a request:</p>";
@@ -55,21 +47,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $body .= " - Qty " . $quantity . " - Location: " . htmlspecialchars($location) . "</p>";
         notify_admins($subject, $body);
-        
+
         // AJAX response
-        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
             header('Content-Type: application/json');
             echo json_encode(['success' => true, 'message' => $success]);
             exit;
         }
-        
-        // Normal redirect
+
+        // Fallback redirect
         header('Location: dashboard.php');
         exit;
     } catch (PDOException $e) {
         $error = 'Error submitting request: ' . $e->getMessage();
-        
-        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
             header('Content-Type: application/json');
             echo json_encode(['success' => false, 'message' => $error]);
             exit;
@@ -83,250 +75,291 @@ include 'includes/header.php';
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
 <style>
-    /* Force dark theme on the whole page */
-    html {
-        color-scheme: dark;
-    }
+    html { color-scheme: dark; }
 
-    /* Native select dark mode fix */
-    .form-select {
+    .form-select, .form-control {
         background-color: #2d343a;
         color: #e9ecef;
         border-color: #495057;
     }
 
-    .form-select option {
-        background-color: #2d343a;
-        color: #e9ecef;
-    }
-
-    .form-select option:checked,
-    .form-select option:hover {
-        background-color: #0d6efd !important;
-        color: white !important;
-    }
-
-    .form-select:focus {
+    .form-select:focus, .form-control:focus {
         border-color: #80bdff;
         box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
     }
 
-    .form-select:required:invalid {
-        color: #adb5bd;
+    /* Green when valid (after validation triggered) */
+    .was-validated .form-select:valid,
+    .was-validated .form-control:valid {
+        border-color: #198754;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right calc(0.375em + 0.1875rem) center;
+        background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
     }
 
-    /* Select2 dark theme improvements */
-    .select2-container--default .select2-selection--single {
-        background-color: #2d343a;
-        border: 1px solid #495057;
-        color: #e9ecef;
-        height: calc(2.25rem + 2px);
-    }
-
-    .select2-container--default .select2-selection--single .select2-selection__rendered {
-        color: #e9ecef;
-        line-height: 2.25rem;
-    }
-
-    .select2-container--default .select2-selection--single .select2-selection__arrow {
-        height: 100%;
-    }
-
-    .select2-dropdown {
-        background-color: #2d343a !important;
-        border: 1px solid #495057 !important;
-        color: #e9ecef !important;
-    }
-
-    .select2-results__option {
-        background-color: #2d343a !important;
-        color: #e9ecef !important;
-    }
-
-    .select2-results__option--highlighted[aria-selected] {
-        background-color: #0d6efd !important;
-        color: white !important;
-    }
-
-    .select2-results__option[aria-selected=true] {
-        background-color: #343a40 !important;
-    }
-
-    .select2-container--default .select2-search--dropdown .select2-search__field {
-        background-color: #343a40;
-        border: 1px solid #495057;
-        color: #e9ecef;
-    }
-
-    .select2-container--default .select2-results__group {
-        color: #adb5bd;
-        background-color: #343a40;
+    /* Red when invalid */
+    .was-validated .form-select:invalid,
+    .was-validated .form-control:invalid {
+        border-color: #dc3545;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right calc(0.375em + 0.1875rem) center;
+        background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
     }
 </style>
 
-<div class="container py-4">
+<div class="container py-4 px-2 px-sm-4">
     <h2 class="mb-4">Submit Supply Request</h2>
-    
+
     <div id="alert-container"></div>
-    
-    <form id="submit-form" method="POST">
-        <div class="mb-3">
-            <label for="location" class="form-label">Location <span class="text-danger">*</span></label>
-            <select class="form-select" id="location" name="location" required>
-                <option value="" disabled selected>Choose location...</option>
-                <?php foreach ($locations as $loc): ?>
-                    <option value="<?php echo htmlspecialchars($loc); ?>">
-                        <?php echo htmlspecialchars($loc); ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        </div>
 
-        <div class="mb-3">
-            <label for="item" class="form-label">Item <span class="text-danger">*</span></label>
-            <select class="form-select" id="item" name="item" required></select>
-        </div>
+    <form id="submit-form" method="POST" class="needs-validation" novalidate>
+        <div class="row g-3">
+            <div class="col-12">
+                <label for="location" class="form-label">Location <span class="text-danger">*</span></label>
+                <select class="form-select" id="location" name="location" required>
+                    <option value="" disabled selected>Choose location...</option>
+                    <?php foreach ($locations as $loc): ?>
+                        <option value="<?= htmlspecialchars($loc) ?>"><?= htmlspecialchars($loc) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <div class="invalid-feedback">Please select a location.</div>
+            </div>
 
-        <div class="mb-3" id="variant_container" style="display:none;">
-            <label for="variant_id" class="form-label">Variant</label>
-            <select class="form-select" id="variant_id" name="variant_id">
-                <option value="">Select Variant</option>
-            </select>
-            <small class="text-muted" id="no_variants_msg" style="display:none;">No variants available for this item.</small>
-        </div>
+            <div class="col-12">
+                <label for="item" class="form-label">Item <span class="text-danger">*</span></label>
+                <select class="form-select" id="item" name="item" required></select>
+                <div class="invalid-feedback">Please select an item.</div>
+            </div>
 
-        <div class="mb-3" id="other_field" style="display:none;">
-            <label for="other" class="form-label">Other Item (max 25 chars)</label>
-            <input type="text" class="form-control" id="other" name="other" maxlength="25">
-        </div>
+            <div class="col-12" id="variant_container" style="display:none;">
+                <label for="variant_id" class="form-label">Variant</label>
+                <select class="form-select" id="variant_id" name="variant_id">
+                    <option value="">Select Variant</option>
+                </select>
+                <small class="text-muted" id="no_variants_msg" style="display:none;">No variants available for this item.</small>
+            </div>
 
-        <div class="mb-3">
-            <label for="quantity" class="form-label">Quantity <span class="text-danger">*</span></label>
-            <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="1" required>
-        </div>
+            <div class="col-12 col-sm-6">
+                <label for="quantity" class="form-label">Quantity <span class="text-danger">*</span></label>
+                <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="1" required>
+                <div class="invalid-feedback">Please enter a quantity of 1 or more.</div>
+            </div>
 
-        <button type="submit" class="btn btn-primary">Submit Request</button>
-        <a href="dashboard.php" class="btn btn-secondary ms-3">Back to Dashboard</a>
+            <div class="col-12 mt-4">
+                <div class="d-flex flex-column flex-sm-row gap-2 gap-sm-3">
+                    <button type="submit" class="btn btn-primary flex-fill" id="submit-btn">
+                        <span class="submit-text">Submit Request</span>
+                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                    </button>
+                    <a href="dashboard.php" class="btn btn-outline-secondary flex-fill">
+                        Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
     </form>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-    $(document).ready(function() {
-        // Initialize Select2 with dark-friendly settings
-        $('#item').select2({
-            width: '100%',
-            dropdownAutoWidth: true,
-            placeholder: 'Select an item',
-            allowClear: true,
-            ajax: {
-                url: 'api_items.php',
-                dataType: 'json',
-                delay: 250,
-                data: function (params) {
-                    return { q: params.term };
-                },
-                processResults: function (data) {
-                    return { results: data };
-                },
-                cache: true
+$(document).ready(function() {
+    // Force clear validation on every load (prevents red on reload)
+    $('#submit-form').removeClass('was-validated');
+    $('#submit-form .form-select, #submit-form .form-control').each(function() {
+        $(this).removeClass('is-invalid is-valid');
+        this.setCustomValidity('');
+    });
+
+    // Initialize Select2
+    $('#item').select2({
+        width: '100%',
+        dropdownAutoWidth: true,
+        placeholder: 'Select an item',
+        allowClear: true,
+        ajax: {
+            url: 'api_items.php',
+            dataType: 'json',
+            delay: 250,
+            data: function (params) {
+                return { q: params.term };
             },
-            minimumInputLength: 0
+            processResults: function (data) {
+                return { results: data };
+            },
+            cache: true
+        },
+        minimumInputLength: 0
+    });
+
+    $('#item').val(null).trigger('change');
+
+    $('#item').on('select2:open', function () {
+        $('.select2-search__field').attr('placeholder', 'Search items or categories...');
+    });
+
+    // Load variants
+    $('#item').on('change', function() {
+        const item = $(this).val();
+        const $vc = $('#variant_container');
+        const $vs = $('#variant_id');
+        const $nm = $('#no_variants_msg');
+
+        $vc.hide();
+        $vs.empty().prop('disabled', true);
+        $nm.hide();
+
+        if (item) {
+            $.get('api_variants.php', { item }, function(variants) {
+                $vs.empty().append('<option value="">Select Variant</option>');
+
+                if (variants?.length > 0) {
+                    variants.forEach(v => $vs.append(`<option value="${v.id}">${v.name}</option>`));
+                    $vs.prop('disabled', false);
+                } else {
+                    $vs.append('<option value="" selected>N/A</option>').prop('disabled', true);
+                    $nm.show();
+                }
+
+                $vc.show();
+            }, 'json').fail(() => {
+                $vs.append('<option value="" selected>Error loading variants</option>');
+                $vc.show();
+            });
+        }
+    });
+
+    // Submit handler
+    $('#submit-form').on('submit', function(e) {
+        e.preventDefault();
+
+        const form = this;
+        let valid = true;
+
+        // Reset validity messages
+        ['location', 'item', 'quantity'].forEach(id => {
+            const el = document.getElementById(id);
+            el.setCustomValidity('');
         });
 
-        // Add "Other" option
-        $('#item').append(new Option('Other', 'other', false, false));
-        $('#item').val(null).trigger('change');
+        // Location
+        const loc = document.getElementById('location');
+        if (!loc.value) {
+            loc.setCustomValidity('Please select a location');
+            valid = false;
+        }
 
-        // Custom placeholder when dropdown opens
-        $('#item').on('select2:open', function () {
-            $('.select2-search__field').attr('placeholder', 'Search items or categories...');
-        });
+        // Item
+        const itemEl = document.getElementById('item');
+        if (!itemEl.value) {
+            itemEl.setCustomValidity('Please select an item');
+            valid = false;
+        }
 
-        // Variant loading logic
-        $('#item').on('change', function() {
-            var item = $(this).val();
-            var $variantContainer = $('#variant_container');
-            var $variantSelect    = $('#variant_id');
-            var $noMsg            = $('#no_variants_msg');
-            
-            $variantContainer.hide();
-            $variantSelect.empty().prop('disabled', true);
-            $noMsg.hide();
-            $('#other_field').hide();
-            
-            if (item === 'other') {
-                $('#other_field').show();
-            } else if (item) {
-                $.get('api_variants.php', { item: item }, function(variants) {
-                    $variantSelect.empty();
-                    $variantSelect.append('<option value="">Select Variant</option>');
-                    
-                    if (variants && variants.length > 0) {
-                        variants.forEach(function(v) {
-                            $variantSelect.append('<option value="' + v.id + '">' + v.name + '</option>');
-                        });
-                        $variantSelect.prop('disabled', false);
-                    } else {
-                        $variantSelect.append('<option value="" selected>N/A</option>').prop('disabled', true);
-                        $noMsg.show();
-                    }
-                    
-                    $variantContainer.show();
-                }, 'json').fail(function() {
-                    $variantSelect.append('<option value="" selected>Error loading variants</option>');
-                    $variantContainer.show();
-                });
-            }
-        });
+        // Quantity
+        const qty = document.getElementById('quantity');
+        if (qty.value < 1 || !qty.value) {
+            qty.setCustomValidity('Please enter a quantity of 1 or more');
+            valid = false;
+        }
 
-        // AJAX form submit
-        $('#submit-form').on('submit', function(e) {
-            e.preventDefault();
+        if (!valid) {
+            form.classList.add('was-validated');
+            form.querySelector(':invalid')?.focus();
+            return;
+        }
 
-            $.ajax({
-                url: 'submit.php',
-                type: 'POST',
-                data: $(this).serialize(),
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        $('#alert-container').html(`
-                            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                                <strong>Success!</strong> Request Submitted.
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            </div>
-                        `);
-                        setTimeout(function() {
-                            $('.alert').alert('close');
-                        }, 5000);
+        // Show spinner
+        const btn = $('#submit-btn');
+        btn.find('.submit-text').addClass('d-none');
+        btn.find('.spinner-border').removeClass('d-none');
+        btn.prop('disabled', true);
 
-                        // Reset form
-                        $('#submit-form')[0].reset();
-                        $('#item').val(null).trigger('change');
-                        $('#variant_container').hide();
-                        $('#other_field').hide();
-                    } else {
-                        $('#alert-container').html(`
-                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                <strong>Error!</strong> ${response.message || 'Unknown error'}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            </div>
-                        `);
-                    }
-                },
-                error: function() {
+        // AJAX
+        $.ajax({
+            url: 'submit.php',
+            type: 'POST',
+            data: $(this).serialize(),
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    $('#alert-container').html(`
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <strong>Success!</strong> Request Submitted.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    `);
+
+                    setTimeout(() => $('.alert').alert('close'), 5000);
+
+                    form.reset();
+                    $('#item').val(null).trigger('change');
+                    $('#variant_container').hide();
+                    form.classList.remove('was-validated');
+
+                    // Clear validation classes on success
+                    ['location', 'item', 'quantity'].forEach(id => {
+                        const el = document.getElementById(id);
+                        el.classList.remove('is-invalid', 'is-valid');
+                        el.setCustomValidity('');
+                    });
+
+                    setTimeout(() => window.location.href = 'dashboard.php', 1500);
+                } else {
                     $('#alert-container').html(`
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <strong>Error!</strong> Submission failed - try again.
+                            <strong>Error!</strong> ${response.message || 'Unknown error'}
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
                     `);
                 }
-            });
+            },
+            error: function() {
+                $('#alert-container').html(`
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <strong>Error!</strong> Submission failed - try again.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `);
+            },
+            complete: function() {
+                btn.find('.submit-text').removeClass('d-none');
+                btn.find('.spinner-border').addClass('d-none');
+                btn.prop('disabled', false);
+            }
         });
     });
+
+    // Live re-validation after first submit attempt
+    const form = document.getElementById('submit-form');
+    form.addEventListener('change', function(e) {
+        if (form.classList.contains('was-validated')) {
+            const field = e.target;
+            if (field.checkValidity()) {
+                field.classList.remove('is-invalid');
+                field.classList.add('is-valid');
+                field.setCustomValidity('');
+            } else {
+                field.classList.remove('is-valid');
+                field.classList.add('is-invalid');
+            }
+        }
+    });
+
+    // Clear validation state on every page load / reload
+    window.addEventListener('pageshow', function() {
+        const form = document.getElementById('submit-form');
+        if (form) {
+            form.classList.remove('was-validated');
+            form.querySelectorAll('.form-select, .form-control').forEach(el => {
+                el.classList.remove('is-invalid', 'is-valid');
+                el.setCustomValidity('');
+            });
+        }
+    });
+});
 </script>
 
 <?php include 'includes/footer.php'; ?>
