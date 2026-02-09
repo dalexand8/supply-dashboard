@@ -346,31 +346,39 @@ $(document).ready(function() {
             data: $form.serialize(),
             dataType: 'json',
             success: function(response) {
-                if (response.success) {
-                    $('#alert-container').html(`
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            <strong>Success!</strong> Request Submitted.
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    `);
+    const $alertContainer = $('#alert-container');
 
-                    setTimeout(() => $('.alert').alert('close'), 5000);
+    if (response.success) {
+        $alertContainer.html(`
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <strong>Success!</strong> ${response.message || 'Request submitted successfully!'}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `);
 
-                    formEl.reset();
-                    $('#item').val(null).trigger('change');
-                    $('#variant_container').hide();
-                    clearValidation();
+        // Reset form completely
+        formEl.reset();
+        $('#item').val(null).trigger('change.select2');
+        $('#variant_id').val('').trigger('change');
+        $('#variant_container').hide();
+        clearValidation();
 
-                    setTimeout(() => window.location.href = 'dashboard.php', 1500);
-                } else {
-                    $('#alert-container').html(`
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <strong>Error!</strong> ${response.message || 'Unknown error'}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    `);
-                }
-            },
+        // Optional: scroll to top or to alert
+        $('html, body').animate({ scrollTop: 0 }, 400);
+
+        // Auto close success message after 4–6 seconds
+        setTimeout(() => {
+            $('.alert-success').alert('close');
+        }, 5000);
+    } else {
+        $alertContainer.html(`
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <strong>Error:</strong> ${response.message || 'Something went wrong. Please try again.'}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `);
+    }
+},
             error: function() {
                 $('#alert-container').html(`
                     <div class="alert alert-danger alert-dismissible fade show" role="alert">
