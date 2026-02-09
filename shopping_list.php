@@ -1,14 +1,13 @@
 <?php
-// shopping_list.php - Clean production version (no debug)
+// shopping_list.php
 require 'includes/auth.php';
 
-if (!isset($_SESSION['user_id']) || !$_SESSION['is_admin']) {
-
-$current_page = basename(__FILE__);
-
-    header('Location: login.php');
+if (!isset($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
+    header('Location: dashboard.php');
     exit;
 }
+
+$current_page = basename(__FILE__);
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -17,6 +16,31 @@ $grouped_items = [];
 $error = '';
 $email_success = '';
 $email_error = '';
+
+// Load grouped data for display
+try {
+    $stmt = $pdo->query("
+        SELECT 
+            r.item_name,
+            iv.name AS variant_name,
+            SUM(r.quantity) AS total_qty,
+            GROUP_CONCAT(
+                CASE 
+                    WHEN r.location IS NOT NULL AND r.location != '' 
+                    THEN CONCAT(r.location, ':', r.quantity)
+                    ELSE NULL
+                END
+                SEPARATOR ', '
+            ) AS location_details
+        FROM requests r
+        LEFT JOIN item_variants iv ON r.variant_id = iv.id
+        GROUP BY r.item_name, r.variant_id
+        ORDER BY r.item_name, iv.name
+    ");
+    $grouped_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $error = 'Database error: ' . $e->getMessage();
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_email'])) {
     $emails = $_POST['emails'] ?? '';
@@ -31,31 +55,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_email'])) {
             $email_error = 'Invalid email addresses.';
         } else {
             // Generate grouped list for email
-            try {
-                $stmt = $pdo->query("
-                    SELECT 
-                        r.item_name,
-                        iv.name AS variant_name,
-                        SUM(r.quantity) AS total_qty,
-                        GROUP_CONCAT(CONCAT(r.location, ':', r.quantity) SEPARATOR ', ') AS location_details
-                    FROM requests r
-                    LEFT JOIN item_variants iv ON r.variant_id = iv.id
-                    GROUP BY r.item_name, r.variant_id
-                    ORDER BY r.item_name, iv.name
-                ");
-                $grouped_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            } catch (PDOException $e) {
-                $email_error = 'Database error generating list: ' . $e->getMessage();
-            }
-            
+            $email_items = $grouped_items; // reuse the already fetched data
+
             if (empty($email_error)) {
-                $body = "<h2>Supply Shopping List</h2>\n<p>Generated on " . date('Y-m-d H:i:s') . "</p>\n";
+                $body = "<h2>Supply Shopping List</h2>\n";
+                $body .= "<p>Generated on " . date('Y-m-d H:i:s') . "</p>\n";
                 if (!empty($message)) {
                     $body .= "<p>" . nl2br(htmlspecialchars($message)) . "</p>\n";
                 }
                 
                 $current_item = '';
-                foreach ($grouped_items as $row) {
+                foreach ($email_items as $row) {
                     if ($row['item_name'] !== $current_item) {
                         if ($current_item !== '') $body .= "</ul>\n";
                         $body .= "<h3>" . htmlspecialchars($row['item_name']) . "</h3><ul>\n";
@@ -63,13 +73,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_email'])) {
                     }
                     $variant = $row['variant_name'] ? htmlspecialchars($row['variant_name']) : 'No variant';
                     $body .= "<li><strong>$variant</strong>: Qty " . $row['total_qty'];
-                    if ($row['location_details']) {
-                        $body .= " (" . htmlspecialchars($row['location_details']) . ")";
+                    
+                    // Clean up location details - remove empty entries
+                    $location_str = trim($row['location_details'] ?? '', ', ');
+                    if (!empty($location_str)) {
+                        $body .= " (" . htmlspecialchars($location_str) . ")";
                     }
+                    
                     $body .= "</li>\n";
                 }
                 if ($current_item !== '') $body .= "</ul>\n";
-                if (empty($grouped_items)) {
+                if (empty($email_items)) {
                     $body .= "<p>No requests yet.</p>\n";
                 }
                 
@@ -79,17 +93,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_email'])) {
                 
                 $mail = new PHPMailer(true);
                 try {
+                    // Use $_ENV instead of getenv()
                     $mail->isSMTP();
-                    $mail->Host       = getenv('SMTP_HOST') ?: 'smtp.gmail.com';
+                    $mail->Host       = $_ENV['SMTP_HOST']   ?? 'smtp.gmail.com';
                     $mail->SMTPAuth   = true;
-                    $mail->Username   = getenv('SMTP_EMAIL');
-                    $mail->Password   = getenv('SMTP_PASS');
+                    $mail->Username   = $_ENV['SMTP_EMAIL']  ?? '';
+                    $mail->Password   = $_ENV['SMTP_PASS']   ?? '';
                     $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-                    $mail->Port       = (int)(getenv('SMTP_PORT') ?: 587);
+                    $mail->Port       = (int)($_ENV['SMTP_PORT'] ?? 587);
                     
-                    $mail->setFrom(getenv('SMTP_EMAIL'), 'Supply Dashboard');
+                    $fromEmail = $_ENV['SMTP_EMAIL'] ?? '';
+                    $fromName  = 'Supply Dashboard';
+
+                    if (empty($fromEmail) || !filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+                        throw new Exception('Invalid or missing From email address in configuration.');
+                    }
+
+                    $mail->setFrom($fromEmail, $fromName);
+                    
                     foreach ($email_list as $email) {
-                        $mail->addAddress($email);
+                        $mail->addAddress(trim($email));
                     }
                     
                     $mail->isHTML(true);
@@ -106,30 +129,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_email'])) {
         }
     }
 }
-
-// Load grouped data for display
-try {
-    $stmt = $pdo->query("
-        SELECT 
-            r.item_name,
-            iv.name AS variant_name,
-            SUM(r.quantity) AS total_qty,
-            GROUP_CONCAT(CONCAT(r.location, ':', r.quantity) SEPARATOR ', ') AS location_details
-        FROM requests r
-        LEFT JOIN item_variants iv ON r.variant_id = iv.id
-        GROUP BY r.item_name, r.variant_id
-        ORDER BY r.item_name, iv.name
-    ");
-    $grouped_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    $error = 'Database error: ' . $e->getMessage();
-}
 ?>
+
 <?php include 'includes/header.php'; ?>
 <?php include 'includes/navbar.php'; ?>
 
 <div class="container mt-5">
     <h2>Grouped Shopping List</h2>
+
     <?php if ($email_success): ?>
         <div class="alert alert-success"><?php echo htmlspecialchars($email_success); ?></div>
     <?php endif; ?>
@@ -161,11 +168,12 @@ try {
     </form>
     
     <p>This page shows aggregated quantities for each item and variant across all locations to make shopping easier.</p>
+
     <?php 
     $current_item = '';
     foreach ($grouped_items as $row): 
         if ($row['item_name'] !== $current_item):
-            if ($current_item !== '') echo '</ul></div>'; // Close previous card
+            if ($current_item !== '') echo '</ul></div>';
             $current_item = $row['item_name'];
     ?>
         <div class="card mb-3">
@@ -178,16 +186,19 @@ try {
             <strong>
                 <?php echo $row['variant_name'] ? htmlspecialchars($row['variant_name']) : 'No variant'; ?>
             </strong>: Qty <?php echo $row['total_qty']; ?>
-            <?php if ($row['location_details']): ?>
-                (<?php echo htmlspecialchars($row['location_details']); ?>)
+            <?php 
+            $location_str = trim($row['location_details'] ?? '', ', ');
+            if (!empty($location_str)): ?>
+                (<?php echo htmlspecialchars($location_str); ?>)
             <?php endif; ?>
         </li>
     <?php 
     endforeach; 
-    if ($current_item !== '') echo '</ul></div>'; // Close last card
+    if ($current_item !== '') echo '</ul></div>';
     if (empty($grouped_items)): ?>
         <p>No requests yet.</p>
     <?php endif; ?>
+
     <a href="dashboard.php" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
 

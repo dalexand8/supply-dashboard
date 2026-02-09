@@ -88,24 +88,31 @@ include 'includes/header.php';
         box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
     }
 
-    /* Green when valid (after validation triggered) */
-    .was-validated .form-select:valid,
-    .was-validated .form-control:valid {
-        border-color: #198754;
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
-        background-repeat: no-repeat;
-        background-position: right calc(0.375em + 0.1875rem) center;
-        background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+    /* Select2 validation styling */
+    .select2-container--default .select2-selection--single.is-invalid {
+        border-color: #dc3545 !important;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e") !important;
+        background-repeat: no-repeat !important;
+        background-position: right calc(0.375em + 0.1875rem) center !important;
+        background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem) !important;
     }
 
-    /* Red when invalid */
-    .was-validated .form-select:invalid,
-    .was-validated .form-control:invalid {
-        border-color: #dc3545;
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
-        background-repeat: no-repeat;
-        background-position: right calc(0.375em + 0.1875rem) center;
-        background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+    .select2-container--default .select2-selection--single.is-valid {
+        border-color: #198754 !important;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e") !important;
+        background-repeat: no-repeat !important;
+        background-position: right calc(0.375em + 0.1875rem) center !important;
+        background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem) !important;
+    }
+
+    .invalid-feedback {
+        display: none;
+        color: #dc3545;
+    }
+
+    .is-invalid ~ .invalid-feedback,
+    .is-invalid + .select2-container ~ .invalid-feedback {
+        display: block;
     }
 </style>
 
@@ -114,23 +121,23 @@ include 'includes/header.php';
 
     <div id="alert-container"></div>
 
-    <form id="submit-form" method="POST" class="needs-validation" novalidate>
+    <form id="submit-form" method="POST">
         <div class="row g-3">
             <div class="col-12">
                 <label for="location" class="form-label">Location <span class="text-danger">*</span></label>
-                <select class="form-select" id="location" name="location" required>
+                <select class="form-select" id="location" name="location">
                     <option value="" disabled selected>Choose location...</option>
                     <?php foreach ($locations as $loc): ?>
                         <option value="<?= htmlspecialchars($loc) ?>"><?= htmlspecialchars($loc) ?></option>
                     <?php endforeach; ?>
                 </select>
-                <div class="invalid-feedback">Please select a location.</div>
+                <div class="invalid-feedback"></div>
             </div>
 
             <div class="col-12">
                 <label for="item" class="form-label">Item <span class="text-danger">*</span></label>
-                <select class="form-select" id="item" name="item" required></select>
-                <div class="invalid-feedback">Please select an item.</div>
+                <select class="form-select" id="item" name="item"></select>
+                <div class="invalid-feedback"></div>
             </div>
 
             <div class="col-12" id="variant_container" style="display:none;">
@@ -139,12 +146,13 @@ include 'includes/header.php';
                     <option value="">Select Variant</option>
                 </select>
                 <small class="text-muted" id="no_variants_msg" style="display:none;">No variants available for this item.</small>
+                <div class="invalid-feedback"></div>
             </div>
 
             <div class="col-12 col-sm-6">
                 <label for="quantity" class="form-label">Quantity <span class="text-danger">*</span></label>
-                <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="1" required>
-                <div class="invalid-feedback">Please enter a quantity of 1 or more.</div>
+                <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="1">
+                <div class="invalid-feedback"></div>
             </div>
 
             <div class="col-12 mt-4">
@@ -164,14 +172,43 @@ include 'includes/header.php';
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/validate.js/0.13.1/validate.min.js"></script>
+
 <script>
+// Validation constraints
+const constraints = {
+    location: {
+        presence: { allowEmpty: false, message: "Please select a location" }
+    },
+    item: {
+        presence: { allowEmpty: false, message: "Please select an item" }
+    },
+    quantity: {
+        presence: { allowEmpty: false, message: "Please enter a quantity" },
+        numericality: {
+            onlyInteger: true,
+            greaterThan: 0,
+            message: "Quantity must be 1 or more"
+        }
+    }
+};
+
 $(document).ready(function() {
-    // Force clear validation on every load (prevents red on reload)
-    $('#submit-form').removeClass('was-validated');
-    $('#submit-form .form-select, #submit-form .form-control').each(function() {
-        $(this).removeClass('is-invalid is-valid');
-        this.setCustomValidity('');
-    });
+
+    const $form = $('#submit-form');
+    const formEl = $form[0];
+
+    function clearValidation() {
+        $form.find('.is-invalid, .is-valid').removeClass('is-invalid is-valid');
+        $form.find('.select2-container').removeClass('is-invalid is-valid');
+        $form.find('.invalid-feedback').hide().text('');
+        $('select, input').each(function() {
+            this.setCustomValidity('');
+        });
+        $('#item').trigger('change.select2');
+    }
+
+    clearValidation();
 
     // Initialize Select2
     $('#item').select2({
@@ -192,9 +229,7 @@ $(document).ready(function() {
             cache: true
         },
         minimumInputLength: 0
-    });
-
-    $('#item').val(null).trigger('change');
+    }).val(null).trigger('change');
 
     $('#item').on('select2:open', function () {
         $('.select2-search__field').attr('placeholder', 'Search items or categories...');
@@ -231,43 +266,71 @@ $(document).ready(function() {
         }
     });
 
+    // Real-time validation
+    $form.on('input change select2:select select2:unselect select2:clear', '.form-control, .form-select', function() {
+        const fieldName = this.name;
+        if (!constraints[fieldName]) return;
+
+        const value = $(this).val() ?? '';
+        const error = validate.single(value, constraints[fieldName]);
+
+        const $field = $(this);
+        const $container = $field.is('#item') ? $field.next('.select2-container') : $field;
+
+        $field.removeClass('is-invalid is-valid');
+        $container.removeClass('is-invalid is-valid');
+
+        const $feedback = $field.next('.invalid-feedback');
+        if ($feedback.length) $feedback.hide();
+
+        if (error) {
+            $field.addClass('is-invalid');
+            $container.addClass('is-invalid');
+            if ($feedback.length) {
+                $feedback.text(error[0]).show();
+            }
+        } else {
+            $field.addClass('is-valid');
+            $container.addClass('is-valid');
+        }
+    });
+
     // Submit handler
-    $('#submit-form').on('submit', function(e) {
+    $form.on('submit', function(e) {
         e.preventDefault();
 
-        const form = this;
-        let valid = true;
+        clearValidation();
 
-        // Reset validity messages
-        ['location', 'item', 'quantity'].forEach(id => {
-            const el = document.getElementById(id);
-            el.setCustomValidity('');
-        });
+        const values = {
+            location: $('#location').val() || '',
+            item: $('#item').val() || '',
+            quantity: $('#quantity').val() || ''
+        };
 
-        // Location
-        const loc = document.getElementById('location');
-        if (!loc.value) {
-            loc.setCustomValidity('Please select a location');
-            valid = false;
-        }
+        const errors = validate(values, constraints);
 
-        // Item
-        const itemEl = document.getElementById('item');
-        if (!itemEl.value) {
-            itemEl.setCustomValidity('Please select an item');
-            valid = false;
-        }
+        if (errors) {
+            Object.keys(errors).forEach(key => {
+                const $input = $(`[name="${key}"]`);
+                if (!$input.length) return;
 
-        // Quantity
-        const qty = document.getElementById('quantity');
-        if (qty.value < 1 || !qty.value) {
-            qty.setCustomValidity('Please enter a quantity of 1 or more');
-            valid = false;
-        }
+                const msg = errors[key][0];
+                const $container = (key === 'item') ? $input.next('.select2-container') : $input;
 
-        if (!valid) {
-            form.classList.add('was-validated');
-            form.querySelector(':invalid')?.focus();
+                $input.addClass('is-invalid');
+                $container.addClass('is-invalid');
+
+                let $feedback = $input.next('.invalid-feedback');
+                if (key === 'item') {
+                    $feedback = $input.next('.select2-container').next('.invalid-feedback');
+                }
+
+                if ($feedback.length) {
+                    $feedback.text(msg).show();
+                }
+            });
+
+            $form.find('.is-invalid').first().focus();
             return;
         }
 
@@ -277,11 +340,10 @@ $(document).ready(function() {
         btn.find('.spinner-border').removeClass('d-none');
         btn.prop('disabled', true);
 
-        // AJAX
         $.ajax({
             url: 'submit.php',
             type: 'POST',
-            data: $(this).serialize(),
+            data: $form.serialize(),
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
@@ -294,17 +356,10 @@ $(document).ready(function() {
 
                     setTimeout(() => $('.alert').alert('close'), 5000);
 
-                    form.reset();
+                    formEl.reset();
                     $('#item').val(null).trigger('change');
                     $('#variant_container').hide();
-                    form.classList.remove('was-validated');
-
-                    // Clear validation classes on success
-                    ['location', 'item', 'quantity'].forEach(id => {
-                        const el = document.getElementById(id);
-                        el.classList.remove('is-invalid', 'is-valid');
-                        el.setCustomValidity('');
-                    });
+                    clearValidation();
 
                     setTimeout(() => window.location.href = 'dashboard.php', 1500);
                 } else {
@@ -319,7 +374,7 @@ $(document).ready(function() {
             error: function() {
                 $('#alert-container').html(`
                     <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <strong>Error!</strong> Submission failed - try again.
+                        <strong>Error!</strong> Submission failed — try again.
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 `);
@@ -330,34 +385,6 @@ $(document).ready(function() {
                 btn.prop('disabled', false);
             }
         });
-    });
-
-    // Live re-validation after first submit attempt
-    const form = document.getElementById('submit-form');
-    form.addEventListener('change', function(e) {
-        if (form.classList.contains('was-validated')) {
-            const field = e.target;
-            if (field.checkValidity()) {
-                field.classList.remove('is-invalid');
-                field.classList.add('is-valid');
-                field.setCustomValidity('');
-            } else {
-                field.classList.remove('is-valid');
-                field.classList.add('is-invalid');
-            }
-        }
-    });
-
-    // Clear validation state on every page load / reload
-    window.addEventListener('pageshow', function() {
-        const form = document.getElementById('submit-form');
-        if (form) {
-            form.classList.remove('was-validated');
-            form.querySelectorAll('.form-select, .form-control').forEach(el => {
-                el.classList.remove('is-invalid', 'is-valid');
-                el.setCustomValidity('');
-            });
-        }
     });
 });
 </script>
