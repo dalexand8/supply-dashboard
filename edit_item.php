@@ -1,136 +1,119 @@
 <?php
-// edit_item.php - Edit item (name and category)
+// edit_item.php - Updated to match admin.php styling
 session_start();
-include 'db.php';
-if (!isset($_SESSION['user_id']) || !$_SESSION['is_admin']) {
-    header('Location: login.php');
+require 'db.php';
+
+if (!isset($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
+    header('Location: dashboard.php');
     exit;
 }
-if (!isset($_GET['id'])) {
+
+if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     header('Location: admin.php');
     exit;
 }
+
 $item_id = (int)$_GET['id'];
-$item = null;
 $error = '';
 $success = '';
-$category_options = getOptions($pdo, 'categories');
+
+// Fetch item
 try {
-    $stmt = $pdo->prepare("SELECT * FROM items WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT i.*, c.name as category_name FROM items i LEFT JOIN categories c ON i.category_id = c.id WHERE i.id = ?");
     $stmt->execute([$item_id]);
     $item = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$item) {
+        header('Location: admin.php');
+        exit;
+    }
 } catch (PDOException $e) {
     $error = 'Database error: ' . $e->getMessage();
 }
-if (!$item) {
-    header('Location: admin.php');
-    exit;
+
+// Fetch categories for dropdown
+try {
+    $stmt = $pdo->query("SELECT id, name FROM categories ORDER BY name");
+    $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $error = 'Error loading categories: ' . $e->getMessage();
+    $categories = [];
 }
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name'] ?? '');
-    $category_id = (int)($_POST['category_id'] ?? 0) ?: null;
+    $category_id = !empty($_POST['category_id']) ? (int)$_POST['category_id'] : null;
+
     if ($name) {
         try {
             $stmt = $pdo->prepare("UPDATE items SET name = ?, category_id = ? WHERE id = ?");
             $stmt->execute([$name, $category_id, $item_id]);
             $success = 'Item updated successfully';
-            header('Location: admin.php');
-            exit;
+            // You can choose: redirect or stay on page
+            // header('Location: admin.php'); exit;
         } catch (PDOException $e) {
             $error = 'Error updating item: ' . $e->getMessage();
         }
     } else {
-        $error = 'Name is required';
+        $error = 'Item name is required';
     }
 }
+
+include 'includes/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Edit Item - Supply Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        html, body { height: 100%; }
-        body { display: flex; flex-direction: column; }
-        .content { flex: 1 0 auto; }
-        footer { flex-shrink: 0; }
-    </style>
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="dashboard.php">Supply Dashboard</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="dashboard.php">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="submit.php">Submit Request</a>
-                    </li>
-                    <?php if ($_SESSION['is_admin']): ?>
-                        <li class="nav-item">
-                            <a class="nav-link" href="shopping_list.php">Shopping List</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="admin.php">Admin Panel</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="login_activity.php">Login Activity Log</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="register.php">Register User</a>
-                        </li>
-                    <?php endif; ?>
-                </ul>
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center text-light" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img src="https://ui-avatars.com/api/?name=<?php echo urlencode($_SESSION['username'] ?? 'User'); ?>&background=0D8ABC&color=fff&bold=true" alt="Avatar" width="32" height="32" class="rounded-circle me-2">
-                            <?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="change_password.php">Change Password</a></li>
-                            <li><a class="dropdown-item" href="logout.php">Logout</a></li>
-                        </ul>
-                    </li>
-                </ul>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-xl-8">
+
+            <h1 class="h2 mb-4">Admin Panel – Edit Item</h1>
+
+            <?php if ($success): ?>
+                <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
+            <?php endif; ?>
+            <?php if ($error): ?>
+                <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+            <?php endif; ?>
+
+            <div class="card mb-4 shadow">
+                <div class="card-header bg-secondary text-white">
+                    <i class="bi bi-pencil-square me-2"></i> Edit Item: <?= htmlspecialchars($item['name']) ?>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-4">
+                            <label for="name" class="form-label small fw-bold">Item Name</label>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   value="<?= htmlspecialchars($item['name']) ?>" required autofocus>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="category_id" class="form-label small fw-bold">Category</label>
+                            <select class="form-select" id="category_id" name="category_id">
+                                <option value="">Uncategorized</option>
+                                <?php foreach ($categories as $cat): ?>
+                                    <option value="<?= $cat['id'] ?>" 
+                                            <?= $cat['id'] == $item['category_id'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($cat['name']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="d-flex gap-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-1"></i> Update Item
+                            </button>
+                            <a href="admin.php" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-1"></i> Back to Admin Panel
+                            </a>
+                        </div>
+                    </form>
+                </div>
             </div>
+
         </div>
-    </nav>
-    <div class="container mt-5 content">
-        <h2>Edit Item</h2>
-        <?php if ($success): ?>
-            <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
-        <?php endif; ?>
-        <?php if ($error): ?>
-            <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
-        <?php endif; ?>
-        <form method="POST">
-            <div class="mb-3">
-                <label for="name" class="form-label">Item Name</label>
-                <input type="text" class="form-control" id="name" name="name" value="<?php echo htmlspecialchars($item['name']); ?>" required>
-            </div>
-            <div class="mb-3">
-                <label for="category_id" class="form-label">Category</label>
-                <select class="form-select" id="category_id" name="category_id">
-                    <option value="">Uncategorized</option>
-                    <?php foreach ($category_options as $opt): ?>
-                        <option value="<?php echo $opt['id']; ?>" <?php if ($opt['id'] == $item['category_id']) echo 'selected'; ?>><?php echo htmlspecialchars($opt['name']); ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <button type="submit" class="btn btn-primary">Update</button>
-        </form>
-        <a href="admin.php" class="btn btn-secondary mt-3">Back to Admin Panel</a>
     </div>
-    <footer class="bg-primary text-white text-center py-3">
-        <p>&copy; 2024 Supply Dashboard. All rights reserved.</p>
-    </footer>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+</div>
+
+<?php include 'includes/footer.php'; ?>

@@ -1,4 +1,6 @@
 <?php
+// admin.php - FIXED: no accordions, no pagination, kept original feel
+
 session_start();
 require 'db.php';
 
@@ -58,7 +60,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_variant'])) {
                 $insert = $pdo->prepare("INSERT INTO item_variants (item_id, name) VALUES (?, ?)");
                 $insert->execute([$item_id, $variant_name]);
                 $success = 'Variant added successfully.';
-                // No highlight
             }
         } catch (PDOException $e) {
             $error = 'Error adding variant: ' . $e->getMessage();
@@ -100,141 +101,147 @@ try {
     $categories = [];
 }
 
-// Fetch items with pagination
-$total_items = 0;
-$per_page = 10;
-$current_page_num = max(1, (int)($_GET['page'] ?? 1));
-$offset = ($current_page_num - 1) * $per_page;
-
+// Fetch ALL items — no pagination
 try {
-    $count_stmt = $pdo->query("SELECT COUNT(*) FROM items");
-    $total_items = $count_stmt->fetchColumn();
-    
-    $stmt = $pdo->prepare("SELECT i.*, c.name as category_name FROM items i LEFT JOIN categories c ON i.category_id = c.id ORDER BY i.name LIMIT ? OFFSET ?");
-    $stmt->bindValue(1, $per_page, PDO::PARAM_INT);
-    $stmt->bindValue(2, $offset, PDO::PARAM_INT);
+    $stmt = $pdo->prepare("SELECT i.*, c.name as category_name FROM items i LEFT JOIN categories c ON i.category_id = c.id ORDER BY i.name");
     $stmt->execute();
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     $error = 'Database error loading items: ' . $e->getMessage();
     $items = [];
 }
-$total_pages = ceil($total_items / $per_page);
 
 include 'includes/header.php';
 ?>
 
-<div class="container-fluid py-4">
-    <h1 class="h2 mb-4">Admin Panel</h1>
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-xl-12">
 
-    <?php if ($success): ?>
-        <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
-    <?php endif; ?>
-    <?php if ($error): ?>
-        <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
-    <?php endif; ?>
+            <h1 class="h2 mb-4">Admin Panel</h1>
 
-    <!-- Pending Item Suggestions - OUTSIDE accordion -->
-    <div class="card mb-5">
-        <div class="card-header bg-primary text-white fw-bold">
-            <i class="bi bi-lightbulb me-2"></i> Pending Item Suggestions
-        </div>
-        <div class="card-body">
-            <ul class="list-group">
-                <?php foreach ($suggestions as $sug): ?>
-                    <?php
-                    $parent_name = '';
-                    if ($sug['parent_item_id']) {
-                        $pstmt = $pdo->prepare("SELECT name FROM items WHERE id = ?");
-                        $pstmt->execute([$sug['parent_item_id']]);
-                        $parent_name = $pstmt->fetchColumn();
-                    }
-                    ?>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <?php if ($sug['parent_item_id']): ?>
-                                <strong>Variant Suggestion for "<?php echo htmlspecialchars($parent_name ?: 'Unknown Item'); ?>"</strong>: <?php echo htmlspecialchars($sug['variant_name']); ?>
-                            <?php else: ?>
-                                <strong>New Item Suggestion</strong>: <?php echo htmlspecialchars($sug['name']); ?>
-                                <?php if ($sug['variant_name']): ?>
-                                    (Initial Variant: <?php echo htmlspecialchars($sug['variant_name']); ?>)
-                                <?php endif; ?>
-                                <?php if ($sug['category_name']): ?>
-                                    (Category: <?php echo htmlspecialchars($sug['category_name']); ?>)
-                                <?php endif; ?>
-                            <?php endif; ?>
-                            <small class="text-muted"> - Suggested by <?php echo htmlspecialchars($sug['username']); ?></small>
-                        </div>
-                        <div>
-                            <a href="approve.php?sug_id=<?php echo $sug['id']; ?>" class="btn btn-sm btn-success me-2">Approve</a>
-                            <a href="reject_suggestion.php?sug_id=<?php echo $sug['id']; ?>" class="btn btn-sm bg-secondary" onclick="return confirm('Reject this suggestion?');">Reject</a>
-                        </div>
-                    </li>
-                <?php endforeach; ?>
-                <?php if (empty($suggestions)): ?>
-                    <li class="list-group-item">No pending item suggestions</li>
-                <?php endif; ?>
-            </ul>
-        </div>
-    </div>
+            <?php if ($success): ?>
+                <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
+            <?php endif; ?>
+            <?php if ($error): ?>
+                <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+            <?php endif; ?>
 
-    <!-- Accordion for the rest -->
-    <div class="accordion" id="adminAccordion">
-        <!-- Categories Management & Add New Category -->
-        <div class="accordion-item">
-            <h2 class="accordion-header">
-                <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCategories" aria-expanded="true" aria-controls="collapseCategories">
-                    <i class="bi bi-tags me-2"></i> Categories Management & Add New Category
-                </button>
-            </h2>
-            <div id="collapseCategories" class="accordion-collapse collapse show">
-                <div class="accordion-body">
-                    <h4 class="mb-3">Add New Category</h4>
-                    <form method="POST" class="mb-4">
-                        <div class="input-group">
-                            <input type="text" class="form-control" name="new_category_name" placeholder="Category name" required>
-                            <button type="submit" class="btn btn-primary">Add Category</button>
+            <!-- Pending Suggestions -->
+            <div class="card mb-4 shadow">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-lightbulb-fill me-2"></i> Pending Suggestions
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        <?php foreach ($suggestions as $sug): ?>
+                            <?php
+                            $parent_name = '';
+                            if ($sug['parent_item_id']) {
+                                $pstmt = $pdo->prepare("SELECT name FROM items WHERE id = ?");
+                                $pstmt->execute([$sug['parent_item_id']]);
+                                $parent_name = $pstmt->fetchColumn() ?: 'Unknown';
+                            }
+                            ?>
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
+                                <div>
+                                    <?php if ($sug['parent_item_id']): ?>
+                                        <strong>Variant for “<?= htmlspecialchars($parent_name) ?>”:</strong> <?= htmlspecialchars($sug['variant_name']) ?>
+                                    <?php else: ?>
+                                        <strong><?= htmlspecialchars($sug['name']) ?></strong>
+                                        <?php if ($sug['variant_name']): ?> (<?= htmlspecialchars($sug['variant_name']) ?>)<?php endif; ?>
+                                        <?php if ($sug['category_name']): ?> — <?= htmlspecialchars($sug['category_name']) ?><?php endif; ?>
+                                    <?php endif; ?>
+                                    <small class="text-muted ms-2">by <?= htmlspecialchars($sug['username']) ?></small>
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="approve.php?sug_id=<?= $sug['id'] ?>" class="btn btn-success">Approve</a>
+                                    <a href="reject_suggestion.php?sug_id=<?= $sug['id'] ?>" class="btn btn-outline-secondary" onclick="return confirm('Reject?');">Reject</a>
+                                </div>
+                            </li>
+                        <?php endforeach; ?>
+                        <?php if (empty($suggestions)): ?>
+                            <li class="list-group-item text-center text-muted py-3">No pending suggestions</li>
+                        <?php endif; ?>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Categories -->
+            <div class="card mb-4 shadow">
+                <div class="card-header bg-secondary text-white">
+                    <i class="bi bi-tags me-2"></i> Categories
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="mb-3">
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control" name="new_category_name" placeholder="New category name" required>
+                            <button class="btn btn-primary" type="submit">Add</button>
                         </div>
                     </form>
 
-                    <h4>Current Categories</h4>
-                    <table class="table table-dark table-striped">
+                    <table class="table table-dark table-striped table-sm mb-0">
                         <thead>
                             <tr>
                                 <th>ID</th>
                                 <th>Name</th>
-                                <th>Actions</th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="small">
                             <?php foreach ($categories as $cat): ?>
                                 <tr>
-                                    <td><?php echo $cat['id']; ?></td>
-                                    <td><?php echo htmlspecialchars($cat['name']); ?></td>
-                                    <td>
-                                        <a href="edit_category.php?id=<?php echo $cat['id']; ?>" class="btn btn-sm btn-warning">Edit</a>
-                                        <a href="delete_category.php?id=<?php echo $cat['id']; ?>" class="btn btn-sm bg-secondary" onclick="return confirm('Are you sure? Items in this category will be uncategorized.');">Delete</a>
+                                    <td><?= $cat['id'] ?></td>
+                                    <td><?= htmlspecialchars($cat['name']) ?></td>
+                                    <td class="text-end">
+                                        <a href="edit_category.php?id=<?= $cat['id'] ?>" class="btn btn-sm btn-warning">Edit</a>
+                                        <a href="delete_category.php?id=<?= $cat['id'] ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete?');">Delete</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                             <?php if (empty($categories)): ?>
-                                <tr><td colspan="3">No categories found</td></tr>
+                                <tr><td colspan="3" class="text-center py-3 text-muted">No categories</td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
             </div>
-        </div>
 
-        <!-- Items Management -->
-        <div class="accordion-item">
-            <h2 class="accordion-header">
-                <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseItems" aria-expanded="true" aria-controls="collapseItems">
-                    <i class="bi bi-box-seam me-2"></i> Items Management (<?php echo $total_items; ?> total)
-                </button>
-            </h2>
-            <div id="collapseItems" class="accordion-collapse collapse show">
-                <div class="accordion-body">
+            <!-- Add New Item -->
+            <div class="card mb-4 shadow">
+                <div class="card-header bg-secondary text-white">
+                    <i class="bi bi-plus-circle me-2"></i> Add New Item
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-5">
+                                <label class="form-label small mb-1">Item Name</label>
+                                <input type="text" class="form-control form-control-sm" name="new_item_name" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small mb-1">Category</label>
+                                <select class="form-select form-select-sm" name="category_id">
+                                    <option value="">Uncategorized</option>
+                                    <?php foreach ($categories as $cat): ?>
+                                        <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="submit" class="btn btn-primary btn-sm w-100">Add Item</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Items Management - ALL items, no pagination -->
+            <div class="card mb-4 shadow">
+                <div class="card-header bg-secondary text-white">
+                    <i class="bi bi-box-seam me-2"></i> Items Management (<?= count($items) ?> total)
+                </div>
+                <div class="card-body">
                     <table class="table table-dark table-striped align-middle">
                         <thead>
                             <tr>
@@ -316,82 +323,22 @@ include 'includes/header.php';
                             <?php endif; ?>
                         </tbody>
                     </table>
-
-                    <!-- Pagination -->
-                    <?php if ($total_pages > 1): ?>
-                        <nav aria-label="Items pagination">
-                            <ul class="pagination justify-content-center">
-                                <?php if ($current_page_num > 1): ?>
-                                    <li class="page-item"><a class="page-link" href="?page=1">First</a></li>
-                                    <li class="page-item"><a class="page-link" href="?page=<?php echo $current_page_num - 1; ?>">Previous</a></li>
-                                <?php endif; ?>
-
-                                <?php
-                                $start = max(1, $current_page_num - 2);
-                                $end = min($total_pages, $current_page_num + 2);
-                                for ($i = $start; $i <= $end; $i++): ?>
-                                    <li class="page-item <?php echo $i == $current_page_num ? 'active' : ''; ?>">
-                                        <a class="page-link" href="?page=<?php echo $i; ?>"><?php echo $i; ?></a>
-                                    </li>
-                                <?php endfor; ?>
-
-                                <?php if ($current_page_num < $total_pages): ?>
-                                    <li class="page-item"><a class="page-link" href="?page=<?php echo $current_page_num + 1; ?>">Next</a></li>
-                                    <li class="page-item"><a class="page-link" href="?page=<?php echo $total_pages; ?>">Last</a></li>
-                                <?php endif; ?>
-                            </ul>
-                        </nav>
-                    <?php endif; ?>
                 </div>
             </div>
-        </div>
 
-        <!-- Add New Item -->
-        <div class="accordion-item">
-            <h2 class="accordion-header">
-                <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAddItem" aria-expanded="true" aria-controls="collapseAddItem">
-                    <i class="bi bi-plus-circle me-2"></i> Add New Item
-                </button>
-            </h2>
-            <div id="collapseAddItem" class="accordion-collapse collapse show">
-                <div class="accordion-body">
-                    <h4>Add New Item</h4>
-                    <form method="POST">
-                        <div class="mb-3">
-                            <label for="new_item_name" class="form-label">Item Name</label>
-                            <input type="text" class="form-control" id="new_item_name" name="new_item_name" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="category_id" class="form-label">Category</label>
-                            <select class="form-select" id="category_id" name="category_id">
-                                <option value="">Uncategorized</option>
-                                <?php foreach ($categories as $cat): ?>
-                                    <option value="<?php echo $cat['id']; ?>"><?php echo htmlspecialchars($cat['name']); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Add Item</button>
-                    </form>
+            <!-- Database Backup -->
+            <div class="card mb-4 shadow">
+                <div class="card-header bg-secondary text-white">
+                    <i class="bi bi-database me-2"></i> Database Backup
                 </div>
-            </div>
-        </div>
-
-        <!-- Database Backup -->
-        <div class="accordion-item">
-            <h2 class="accordion-header">
-                <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBackup" aria-expanded="true" aria-controls="collapseBackup">
-                    <i class="bi bi-database-down me-2"></i> Database Backup
-                </button>
-            </h2>
-            <div id="collapseBackup" class="accordion-collapse collapse show">
-                <div class="accordion-body">
-                    <p class="mb-3">Create a full backup of the database (SQL file download).</p>
+                <div class="card-body">
+                    <p class="mb-3">Download full database backup (SQL file)</p>
                     <form method="POST" action="backup.php">
-                        <button type="submit" class="btn btn-primary">Download Backup Now</button>
+                        <button type="submit" class="btn btn-primary">Download Backup</button>
                     </form>
-                    <small class="text-muted d-block mt-3">Backup includes all tables (users, requests, items, variants, categories, suggestions, logs).</small>
                 </div>
             </div>
+
         </div>
     </div>
 </div>

@@ -48,32 +48,40 @@ include 'includes/header.php';
 ?>
 
 <div class="container py-4">
-    <div class="text-center mb-4">
+    <div class="text-center mb-5">
         <h1 class="h2 mb-3">Supply Requests Dashboard</h1>
-        <div class="fs-5 mb-3">
-            <span class="badge bg-secondary fs-5" id="total-count"><?= $total_requests ?> Total</span>
-        </div>
 
-        <div class="d-flex justify-content-center flex-wrap gap-3 mb-4" id="status-badges-container">
-            <?php
-            $priority_order = ['Pending', 'Ordered', 'Backordered', 'Approved', 'Acknowledged', 'Fulfilled'];
-            $ordered_counts = [];
-            foreach ($priority_order as $status) {
-                if (!empty($status_counts[$status])) {
-                    $ordered_counts[$status] = $status_counts[$status];
-                }
-            }
-            foreach ($status_counts as $status => $count) {
-                if (!in_array($status, $priority_order) && $count > 0) {
-                    $ordered_counts[$status] = $count;
-                }
-            }
+        <!-- Centered total and badges section -->
+        <div class="d-flex flex-column align-items-center gap-3 mb-4">
+            <!-- Total count - prominent and centered -->
+            <span class="badge bg-secondary fs-4 px-5 py-3" id="total-count">
+                <?= $total_requests ?> Total
+            </span>
 
-            foreach ($ordered_counts as $status => $count):
-                $class = getStatusClass($status);
-            ?>
-                <span class="badge <?= $class ?> fs-5 status-badge"><?= $count ?> <?= htmlspecialchars($status) ?></span>
-            <?php endforeach; ?>
+            <!-- Status badges - centered below total -->
+            <div class="d-flex justify-content-center flex-wrap gap-3" id="status-badges-container">
+                <?php
+                $priority_order = ['Pending', 'Ordered', 'Backordered', 'Approved', 'Acknowledged', 'Fulfilled'];
+                $ordered_counts = [];
+                foreach ($priority_order as $status) {
+                    if (!empty($status_counts[$status])) {
+                        $ordered_counts[$status] = $status_counts[$status];
+                    }
+                }
+                foreach ($status_counts as $status => $count) {
+                    if (!in_array($status, $priority_order) && $count > 0) {
+                        $ordered_counts[$status] = $count;
+                    }
+                }
+
+                foreach ($ordered_counts as $status => $count):
+                    $class = getStatusClass($status);
+                ?>
+                    <span class="badge <?= $class ?> fs-5 px-4 py-2 status-badge">
+                        <?= $count ?> <?= htmlspecialchars($status) ?>
+                    </span>
+                <?php endforeach; ?>
+            </div>
         </div>
     </div>
 
@@ -95,13 +103,13 @@ include 'includes/header.php';
     <?php else: ?>
         <div class="accordion" id="officesAccordion">
             <?php 
-           
+     
             foreach ($locations as $loc): 
                 $loc_requests = $requests_by_location[$loc] ?? [];
             ?>
                 <div class="accordion-item border-0 shadow-sm mb-3 rounded overflow-hidden">
                     <h2 class="accordion-header">
-                        <button class="accordion-button fw-bold text-white <?= 'collapsed' ?>" 
+                        <button class="accordion-button fw-bold text-white" 
                                 type="button" 
                                 data-bs-toggle="collapse" 
                                 data-bs-target="#collapse<?= htmlspecialchars(str_replace(' ', '', $loc)) ?>" 
@@ -222,13 +230,14 @@ function getStatusClass(status) {
 function updateTopCounters(newCounts, newTotal) {
     const totalEl = document.getElementById('total-count');
     if (totalEl && newTotal !== undefined) {
-        totalEl.textContent = `${newTotal} Total`;
+        totalEl.textContent = `${newTotal} Total Requests`;
     }
 
     const container = document.getElementById('status-badges-container');
     if (!container) return;
 
-    container.querySelectorAll('.status-badge:not(#total-count)').forEach(b => b.remove());
+    // Clear existing status badges
+    container.innerHTML = '';
 
     const priority = ['Pending', 'Ordered', 'Backordered', 'Approved', 'Acknowledged', 'Fulfilled'];
 
@@ -236,7 +245,7 @@ function updateTopCounters(newCounts, newTotal) {
         const count = newCounts[status] || 0;
         if (count > 0) {
             const badge = document.createElement('span');
-            badge.className = `badge ${getStatusClass(status)} fs-5 status-badge`;
+            badge.className = `badge ${getStatusClass(status)} fs-5 px-4 py-2 status-badge`;
             badge.textContent = `${count} ${status}`;
             container.appendChild(badge);
         }
@@ -245,7 +254,7 @@ function updateTopCounters(newCounts, newTotal) {
     Object.keys(newCounts).forEach(status => {
         if (!priority.includes(status) && newCounts[status] > 0) {
             const badge = document.createElement('span');
-            badge.className = `badge ${getStatusClass(status)} fs-5 status-badge`;
+            badge.className = `badge ${getStatusClass(status)} fs-5 px-4 py-2 status-badge`;
             badge.textContent = `${newCounts[status]} ${status}`;
             container.appendChild(badge);
         }
@@ -357,9 +366,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // ────────────────────────────────────────────────
-    // Bulk delete – optimistic + safe
-    // ────────────────────────────────────────────────
+    // Bulk delete
     document.getElementById('bulk-delete-btn')?.addEventListener('click', function() {
         const checkedBoxes = document.querySelectorAll('.request-checkbox:checked');
         const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
@@ -372,7 +379,6 @@ document.addEventListener('DOMContentLoaded', function() {
         button.disabled = true;
         button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Deleting...';
 
-        // Remember which ones we are trying to delete
         const idsToRemove = new Set(selectedIds);
 
         fetch('delete_bulk_requests.php', {
@@ -391,7 +397,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return { ok: r.ok, data };
         })
         .then(({ ok, data }) => {
-            // Remove rows that still exist (optimistic UI)
             let removed = 0;
             idsToRemove.forEach(id => {
                 const row = findRequestRow(id);
@@ -401,29 +406,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
 
-            // Try to update counters if server gave valid data
             if (data && data.counts && data.total !== undefined) {
                 updateTopCounters(data.counts, data.total);
             }
 
-            // Reset checkboxes
             document.querySelectorAll('.request-checkbox, .select-all-location').forEach(el => el.checked = false);
             updateBulkUI();
 
-            // Only complain if almost nothing was removed
             if (removed === 0) {
                 alert('Bulk delete may have failed – please refresh and check.');
             }
         })
         .catch(err => {
             console.error('Bulk delete network error', err);
-
-            // Check if rows are still there → only then show error
             let anyStillThere = false;
             idsToRemove.forEach(id => {
                 if (findRequestRow(id)) anyStillThere = true;
             });
-
             if (anyStillThere) {
                 alert('Bulk delete failed – check console for details.');
             }

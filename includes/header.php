@@ -246,6 +246,22 @@ body[data-bs-theme="dark"] .form-select:required:invalid {
     color: #adb5bd;
 }
 
+
+.table td, .table th {
+    padding: 0.35rem 0.5rem !important;
+    line-height: 1.3 !important;
+}
+
+.badge {
+    line-height: 1.4 !important;
+    padding: 0.25em 0.5em !important;
+}
+
+.btn-sm {
+    padding: 0.15rem 0.4rem !important;
+    line-height: 1.2 !important;
+}
+
 </style>
 </head>
 <body class="d-flex flex-column min-vh-100">
