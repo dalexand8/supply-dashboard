@@ -51,14 +51,11 @@ include 'includes/header.php';
     <div class="text-center mb-5">
         <h1 class="h2 mb-3">Supply Requests Dashboard</h1>
 
-        <!-- Centered total and badges section -->
         <div class="d-flex flex-column align-items-center gap-3 mb-4">
-            <!-- Total count - prominent and centered -->
             <span class="badge bg-secondary fs-4 px-5 py-3" id="total-count">
                 <?= $total_requests ?> Total
             </span>
 
-            <!-- Status badges - centered below total -->
             <div class="d-flex justify-content-center flex-wrap gap-3" id="status-badges-container">
                 <?php
                 $priority_order = ['Pending', 'Ordered', 'Backordered', 'Approved', 'Acknowledged', 'Fulfilled'];
@@ -105,6 +102,7 @@ include 'includes/header.php';
     <?php else: ?>
         <div class="accordion" id="officesAccordion">
             <?php 
+          
             foreach ($locations as $loc): 
                 $loc_requests = $requests_by_location[$loc] ?? [];
             ?>
@@ -181,21 +179,25 @@ include 'includes/header.php';
                                                     </div>
                                                 </div>
 
-                                                <div class="d-flex align-items-center gap-2 mt-2 mt-md-0">
-                                                    <?php if ($can_edit): ?>
-                                                        <!-- User can edit quantity -->
-                                                        <div class="input-group input-group-sm" style="width: 120px;">
-                                                            <input type="number" class="form-control bg-dark text-white border-secondary user-qty-input" 
-                                                                   value="<?= $req['quantity'] ?>" 
-                                                                   min="1" 
+                                                <div class="d-flex align-items-center gap-3 mt-2 mt-md-0 flex-wrap">
+                                                    <!-- Quantity editing: admins always, users only own pending -->
+                                                    <?php if (!empty($_SESSION['is_admin']) || $can_edit): ?>
+                                                        <div class="input-group input-group-sm" style="width: 130px; flex-shrink: 0;">
+                                                            <input type="number" class="form-control bg-dark text-white border-secondary qty-input"
+                                                                   value="<?= $req['quantity'] ?>"
+                                                                   min="1"
                                                                    data-request-id="<?= $req['id'] ?>">
-                                                            <button class="btn btn-outline-success user-update-qty-btn" 
+                                                            <button class="btn btn-outline-success update-qty-btn"
                                                                     data-request-id="<?= $req['id'] ?>">
                                                                 <i class="bi bi-check-lg"></i>
                                                             </button>
                                                         </div>
+                                                    <?php else: ?>
+                                                        <span class="badge bg-secondary">Qty: <?= $req['quantity'] ?></span>
+                                                    <?php endif; ?>
 
-                                                        <!-- User can delete own pending request -->
+                                                    <!-- User delete (only own pending) -->
+                                                    <?php if ($can_edit): ?>
                                                         <button class="btn btn-sm btn-outline-danger user-delete-btn"
                                                                 data-request-id="<?= $req['id'] ?>"
                                                                 title="Delete this request">
@@ -203,22 +205,26 @@ include 'includes/header.php';
                                                         </button>
                                                     <?php endif; ?>
 
+                                                    <!-- Admin controls -->
                                                     <?php if (!empty($_SESSION['is_admin'])): ?>
-                                                        <select class="form-select form-select-sm status-select bg-dark text-white border-secondary" 
-                                                                data-request-id="<?= $req['id'] ?>">
-                                                            <option value="Pending"    <?= ($req['status'] ?? '') === 'Pending'    ? 'selected' : '' ?>>Pending</option>
-                                                            <option value="Approved"   <?= ($req['status'] ?? '') === 'Approved'   ? 'selected' : '' ?>>Approved</option>
-                                                            <option value="Acknowledged" <?= ($req['status'] ?? '') === 'Acknowledged' ? 'selected' : '' ?>>Acknowledged</option>
-                                                            <option value="Denied"     <?= ($req['status'] ?? '') === 'Denied'     ? 'selected' : '' ?>>Denied</option>
-                                                            <option value="Fulfilled"  <?= ($req['status'] ?? '') === 'Fulfilled'  ? 'selected' : '' ?>>Fulfilled</option>
-                                                            <option value="Ordered"    <?= ($req['status'] ?? '') === 'Ordered'    ? 'selected' : '' ?>>Ordered</option>
-                                                        </select>
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <select class="form-select form-select-sm status-select bg-dark text-white border-secondary" 
+                                                                    style="width: 140px;"
+                                                                    data-request-id="<?= $req['id'] ?>">
+                                                                <option value="Pending"    <?= ($req['status'] ?? '') === 'Pending'    ? 'selected' : '' ?>>Pending</option>
+                                                                <option value="Approved"   <?= ($req['status'] ?? '') === 'Approved'   ? 'selected' : '' ?>>Approved</option>
+                                                                <option value="Acknowledged" <?= ($req['status'] ?? '') === 'Acknowledged' ? 'selected' : '' ?>>Acknowledged</option>
+                                                                <option value="Denied"     <?= ($req['status'] ?? '') === 'Denied'     ? 'selected' : '' ?>>Denied</option>
+                                                                <option value="Fulfilled"  <?= ($req['status'] ?? '') === 'Fulfilled'  ? 'selected' : '' ?>>Fulfilled</option>
+                                                                <option value="Ordered"    <?= ($req['status'] ?? '') === 'Ordered'    ? 'selected' : '' ?>>Ordered</option>
+                                                            </select>
 
-                                                        <button class="btn btn-sm btn-outline-danger delete-request-btn"
-                                                                data-request-id="<?= $req['id'] ?>"
-                                                                title="Delete">
-                                                            <i class="bi bi-trash"></i>
-                                                        </button>
+                                                            <button class="btn btn-sm btn-outline-danger delete-request-btn"
+                                                                    data-request-id="<?= $req['id'] ?>"
+                                                                    title="Delete">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        </div>
                                                     <?php endif; ?>
                                                 </div>
                                             </div>
@@ -238,7 +244,7 @@ include 'includes/header.php';
 <?php include 'includes/footer.php'; ?>
 
 <script>
-// Helpers
+// Helpers (unchanged)
 function getStatusClass(status) {
     const map = {
         'Pending':      'bg-warning text-dark',
@@ -292,142 +298,113 @@ function updateBulkUI() {
     const bulkContainer = document.getElementById('bulk-actions');
     const countElement  = document.getElementById('selected-count');
 
-    if (bulkContainer) {
-        bulkContainer.style.display = checkedCount > 0 ? 'block' : 'none';
-    }
-
-    if (countElement) {
-        countElement.textContent = checkedCount;
-    }
+    if (bulkContainer) bulkContainer.style.display = checkedCount > 0 ? 'block' : 'none';
+    if (countElement) countElement.textContent = checkedCount;
 }
 
 function findRequestRow(id) {
     return document.querySelector(`[data-request-id="${id}"]`);
 }
 
-// ────────────────────────────────────────────────
-// User: Update quantity
-// ────────────────────────────────────────────────
-document.querySelectorAll('.user-update-qty-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        const requestId = this.dataset.requestId;
-        const input = document.querySelector(`.user-qty-input[data-request-id="${requestId}"]`);
-        const newQty = parseInt(input.value, 10);
+// Quantity update – auto on blur + manual checkmark
+document.querySelectorAll('.qty-input').forEach(input => {
+    const requestId = input.dataset.requestId;
+    const btn = document.querySelector(`.update-qty-btn[data-request-id="${requestId}"]`);
+    const qtyDisplay = document.getElementById(`qty-${requestId}`);
+
+    if (!qtyDisplay) {
+        console.warn('Missing qty display for request', requestId);
+        return;
+    }
+
+    const doUpdate = () => {
+        const newQty = parseInt(input.value.trim(), 10);
 
         if (isNaN(newQty) || newQty < 1) {
-            alert('Please enter a valid quantity (1 or more)');
+            alert('Please enter a valid quantity (at least 1)');
+            input.value = qtyDisplay.textContent;
             return;
         }
 
-        const originalBtnHtml = this.innerHTML;
-        this.disabled = true;
-        this.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        if (newQty === parseInt(qtyDisplay.textContent, 10)) return;
+
+        input.disabled = true;
+        if (btn) btn.disabled = true;
 
         fetch('update_request_qty.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: `request_id=${encodeURIComponent(requestId)}&quantity=${newQty}`
         })
-        .then(r => r.json())
+        .then(async r => {
+            const text = await r.text();
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return JSON.parse(text);
+        })
         .then(data => {
             if (data.success) {
-                document.getElementById(`qty-${requestId}`).textContent = newQty;
+                qtyDisplay.textContent = newQty;
                 input.style.backgroundColor = '#1e3a2f';
                 setTimeout(() => input.style.backgroundColor = '', 800);
             } else {
                 alert(data.error || 'Failed to update quantity');
-                input.value = data.old_quantity || input.value;
-            }
-        })
-        .catch(() => {
-            alert('Could not update quantity');
-        })
-        .finally(() => {
-            this.disabled = false;
-            this.innerHTML = originalBtnHtml;
-        });
-    });
-});
-
-// ────────────────────────────────────────────────
-// User: Delete own pending request
-// ────────────────────────────────────────────────
-document.querySelectorAll('.user-delete-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        const requestId = this.dataset.requestId;
-        const row = document.querySelector(`[data-request-id="${requestId}"]`);
-
-        if (!confirm('Delete this request? This cannot be undone.')) return;
-
-        const originalHtml = this.innerHTML;
-        this.disabled = true;
-        this.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-
-        fetch('delete_request.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `request_id=${encodeURIComponent(requestId)}`
-        })
-        .then(async r => {
-            const text = await r.text();
-
-            console.log('DELETE DEBUG ───────────────────────────────');
-            console.log('HTTP status:', r.status);
-            console.log('Raw response body:', text);
-            console.log('Response headers:', [...r.headers.entries()]);
-
-            if (!r.ok) {
-                console.warn('HTTP not OK:', r.status, r.statusText);
-                throw new Error(`Server returned HTTP ${r.status}`);
-            }
-
-            let data;
-            try {
-                data = JSON.parse(text);
-                console.log('Parsed JSON:', data);
-            } catch (jsonErr) {
-                console.error('JSON parse failed:', jsonErr.message);
-                console.log('First 300 chars of response:', text.substring(0, 300));
-                throw new Error('Invalid JSON response from server');
-            }
-
-            return data;
-        })
-        .then(data => {
-            console.log('Success path reached — data:', data);
-
-            if (data && data.success === true) {
-                console.log('Delete successful — removing row');
-                row.remove();
-
-                if (data.counts && data.total !== undefined) {
-                    console.log('Updating counters with:', data.counts, data.total);
-                    updateTopCounters(data.counts, data.total);
-                }
-            } else {
-                console.warn('Server said success=false or no success field');
-                alert('Delete failed: ' + (data?.error || 'Unknown server response'));
+                input.value = data.old_quantity ?? qtyDisplay.textContent;
             }
         })
         .catch(err => {
-            console.error('DELETE ERROR ──────────────────────────────');
-            console.error(err);
-            alert('Could not complete delete: ' + err.message);
+            console.error('Quantity update failed:', err);
+            alert('Could not update quantity');
+            input.value = qtyDisplay.textContent;
         })
         .finally(() => {
-            console.log('Delete operation finished');
-            this.disabled = false;
-            this.innerHTML = originalHtml;
+            input.disabled = false;
+            if (btn) btn.disabled = false;
         });
-    });
+    };
+
+    input.addEventListener('blur', doUpdate);
+    if (btn) btn.addEventListener('click', e => { e.preventDefault(); doUpdate(); });
 });
 
-// ────────────────────────────────────────────────
-// Admin-only handlers (bulk delete, status change, etc.)
-// ────────────────────────────────────────────────
-
+// All admin/user handlers inside DOMContentLoaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Single delete (admin)
+    // User delete own pending request
+    document.querySelectorAll('.user-delete-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const requestId = this.dataset.requestId;
+            const row = document.querySelector(`[data-request-id="${requestId}"]`);
+
+            if (!confirm('Delete this request? This cannot be undone.')) return;
+
+            const originalHtml = this.innerHTML;
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+            fetch('delete_request.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `request_id=${encodeURIComponent(requestId)}`
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    row.remove();
+                    if (data.counts && data.total !== undefined) {
+                        updateTopCounters(data.counts, data.total);
+                    }
+                } else {
+                    alert(data.error || 'Delete failed');
+                }
+            })
+            .catch(() => alert('Could not delete request'))
+            .finally(() => {
+                this.disabled = false;
+                this.innerHTML = originalHtml;
+            });
+        });
+    });
+
+    // Admin: single delete
     document.querySelectorAll('.delete-request-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -462,7 +439,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Status change (admin)
+    // Admin: status change
     document.querySelectorAll('.status-select').forEach(select => {
         select.addEventListener('change', function() {
             const id = this.dataset.requestId;
@@ -497,7 +474,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Bulk UI events (admin)
+    // Bulk UI events
     document.querySelectorAll('.request-checkbox').forEach(cb => {
         cb.addEventListener('change', updateBulkUI);
     });
@@ -511,7 +488,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Bulk delete (admin)
+    // Bulk delete
     document.getElementById('bulk-delete-btn')?.addEventListener('click', function() {
         const checkedBoxes = document.querySelectorAll('.request-checkbox:checked');
         const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
@@ -524,8 +501,6 @@ document.addEventListener('DOMContentLoaded', function() {
         button.disabled = true;
         button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Deleting...';
 
-        const idsToRemove = new Set(selectedIds);
-
         fetch('delete_bulk_requests.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -533,7 +508,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(r => r.json())
         .then(data => {
-            idsToRemove.forEach(id => {
+            selectedIds.forEach(id => {
                 const row = findRequestRow(id);
                 if (row) row.remove();
             });
@@ -545,10 +520,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.request-checkbox, .select-all-location').forEach(el => el.checked = false);
             updateBulkUI();
         })
-        .catch(err => {
-            console.error('Bulk delete failed', err);
-            alert('Bulk delete failed');
-        })
+        .catch(() => alert('Bulk delete failed'))
         .finally(() => {
             button.disabled = false;
             button.innerHTML = '<i class="bi bi-trash me-2"></i> Delete <span id="selected-count">0</span> selected';
